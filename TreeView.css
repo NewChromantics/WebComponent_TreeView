@@ -1,0 +1,37 @@
+*
+{
+	--Indent:		0;
+	
+	margin:		10px;
+	padding:	3px;
+	margin-left:	calc(var(--Indent)*20px);
+	
+}
+
+/* disable pointer events, except on the :before where our error is */
+*[Collapsed]
+{
+	pointer-events: none;
+}
+*[Collapsed]:before
+{
+	pointer-events: auto;
+	cursor:			pointer;
+}
+
+
+/* hide children when collapsed */
+*[Collapsed=true] *
+{
+	display:	none;
+}
+
+*[Collapsed=true]:before
+{
+	content:	"\25BE";	/*hex html code*/
+}
+
+*[Collapsed=false]:before
+{
+	content:	"\25B8";
+}

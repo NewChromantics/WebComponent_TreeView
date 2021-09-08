@@ -1,0 +1,44 @@
+<html>
+<head>
+<script src="./TreeView.js" type=module></script>
+<style>
+body
+{
+	display:	flex;
+	margin:		0px;
+	background:	#3ac;
+}
+
+tree-view
+{
+	margin-left:	10vw;
+	background:	#eee;
+	overflow:	scroll;
+}
+
+@media (prefers-color-scheme: dark) 
+{
+	tree-view
+	{
+		background:	#333;
+	}
+}
+
+</style>
+</head>
+<body>
+<tree-view id="TestTree" css="TreeView.css"></tree-view>
+<script type=module>
+
+let Test = {};
+Test.Cat = 'Furry';
+Test.Fish = 'Wet';
+Test.Circle = {};
+	Test.Circle.Position = [0,1,2];
+	Test.Circle.Radius = 3;
+	
+TestTree.json = Test;
+
+</script>
+</body>
+</html>
