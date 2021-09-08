@@ -197,7 +197,7 @@ export default class TreeViewElement extends HTMLElement
 		if ( IsObject )
 		{
 			Element.setAttribute('Collapsed',false);
-			/*
+			
 			Element.onclick = function(Event)
 			{
 				let Collapsed = Element.getAttribute('Collapsed') == 'true';
@@ -205,7 +205,7 @@ export default class TreeViewElement extends HTMLElement
 				Element.setAttribute('Collapsed',Collapsed);
 				Event.stopPropagation();
 			}
-			*/
+			
 		}
 		
 		
