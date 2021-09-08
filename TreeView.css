@@ -5,13 +5,21 @@
 	margin:		10px;
 	padding:	3px;
 	margin-left:	calc(var(--Indent)*20px);
-	
+
+	/* ios enable dragging, instead of draggable=true */
+	xxx-webkit-user-select: none;
+}
+
+*[DragOver]
+{
+	border-bottom:	dashed red 1px;
+	margin-bottom:	-1px;	/* undo border change of size */
 }
 
 /* disable pointer events, except on the :before where our error is */
 *[Collapsed]
 {
-	pointer-events: none;
+	xxpointer-events: none;
 }
 *[Collapsed]:before
 {

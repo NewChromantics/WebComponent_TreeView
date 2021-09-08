@@ -12,8 +12,9 @@ body
 tree-view
 {
 	margin-left:	10vw;
-	background:	#eee;
-	overflow:	scroll;
+	background:		#eee;
+	color:			#333;
+	overflow:		scroll;
 }
 
 @media (prefers-color-scheme: dark) 
@@ -21,6 +22,7 @@ tree-view
 	tree-view
 	{
 		background:	#333;
+		color:		#eee;
 	}
 }
 
@@ -34,7 +36,7 @@ let Test = {};
 Test.Cat = 'Furry';
 Test.Fish = 'Wet';
 Test.Circle = {};
-	Test.Circle.Position = [0,1,2];
+	Test.Circle.Position = [0,1,2,{}];
 	Test.Circle.Radius = 3;
 	
 TestTree.json = Test;
