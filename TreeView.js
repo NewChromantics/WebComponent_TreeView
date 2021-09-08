@@ -101,19 +101,103 @@ export default class TreeViewElement extends HTMLElement
 	
 	SetupTreeNodeElement(Element,Indent,Key,Value)
 	{
-		const IsObject = ( typeof Value == typeof {} );
+		const IsObject = typeof Value == typeof {};
 		
 		//	set css variable
+		Element.Key = Key;
+		Element.Value = Value;
 		Element.style.setProperty(`--Indent`,Indent);
 		Element.style.setProperty(`--Key`,Key);
 		Element.style.setProperty(`--Value`,Value);
+		
+		
+		Element.setAttribute('draggable',true);
+		//	on ios its a css choice
+		//	gr: not required https://stackoverflow.com/questions/6600950/native-html5-drag-and-drop-in-mobile-safari-ipad-ipod-iphone
+		Element.style.setProperty('webkitUserDrag','element');
+		Element.style.setProperty('webkitUserDrop','element');
+		
+		
+		function OnDragOver(Event)
+		{
+			//	continuously called
+			//console.log(`OnDragOver ${Key}`);
+			Element.setAttribute('DragOver',true);
+			Event.stopPropagation();
+			Event.preventDefault();	//	ios to accept drop
+			
+			//	seems to default to copy if you dont set this
+			//	ios has no link icon, nothing has move icon
+			//Event.dataTransfer.dropEffect = 'copy';
+			//	copy then link here, drop will fail, but using link to get icon on desktop
+			Event.dataTransfer.dropEffect = 'link';
+			//Event.dataTransfer.dropEffect = 'move';
+			//return true;
+		}
+		function OnDragLeave(Event)
+		{
+			//console.log(`OnDragLeave ${Key}`);
+			Element.removeAttribute('DragOver');
+		}
+		function OnDrop(Event)
+		{
+			console.log(`OnDrop ${Key}`);
+			Element.removeAttribute('DragOver');
+			Event.preventDefault();
+			Event.stopPropagation();	//	dont need to pass to parent
+		}
+		
+		function OnDragStart(Event)
+		{
+			//console.log(`OnDragStart ${Key}`);
+			//Event.dataTransfer.effectAllowed = 'all';
+			Event.dataTransfer.dropEffect = 'link';	//	copy move link none
+			Event.dataTransfer.setData('text/plain', 'hello');
+			
+			Event.stopPropagation();	//	stops multiple objects being dragged
+			//Event.preventDefault();	//	this stops drag entirely
+			//return true;//	not required?
+		}
+		
+		function OnDragEnd(Event)
+		{
+			console.log(`OnDragEnd ${Key}`);
+			Element.removeAttribute('DragOver');			
+			
+			//	dont need to tell parent
+			Event.stopPropagation();
+		}
+		
+		function OnDrag(Event)
+		{
+			//	continuously called
+			//console.log(`OnDrag`);
+		}
+		function OnDragEnter(Event)
+		{
+			console.log(`OnDragEnter ${Key}`);
+			//	this to allow this as a drop target
+			Event.preventDefault();
+			return true;
+		}
+		
+		Element.addEventListener('dragstart',OnDragStart);
+		Element.addEventListener('dragenter',OnDragEnter);
+		Element.addEventListener('drag',OnDrag);	//	would be good to allow temporary effects
+		Element.addEventListener('dragend',OnDragEnd);
+
+		Element.addEventListener('drop',OnDrop);
+		Element.addEventListener('dragover',OnDragOver);
+		Element.addEventListener('dragleave',OnDragLeave);
+		
+		
 		
 		//	toggle collapsable
 		//	attribute only exists on collapsable objects
 		if ( IsObject )
 		{
 			Element.setAttribute('Collapsed',false);
-			
+			/*
 			Element.onclick = function(Event)
 			{
 				let Collapsed = Element.getAttribute('Collapsed') == 'true';
@@ -121,6 +205,7 @@ export default class TreeViewElement extends HTMLElement
 				Element.setAttribute('Collapsed',Collapsed);
 				Event.stopPropagation();
 			}
+			*/
 		}
 		
 		
@@ -175,3 +260,4 @@ export default class TreeViewElement extends HTMLElement
 
 //	name requires dash!
 window.customElements.define( TreeViewElement.ElementName(), TreeViewElement );
+
