@@ -321,30 +321,36 @@ export default class TreeViewElement extends HTMLElement
 		
 		let SetupTreeNodeElement = this.SetupTreeNodeElement.bind(this);
 		
-		function RecursivelyAddObject(NodeObject,Parent,Address)
+		function RecursivelyAddObject(NodeObject,ParentNode,ParentElement,Address)
 		{
+			let ParentNodeMeta = {};
+			ParentNodeMeta.Ignore = [];
+			Object.assign( ParentNodeMeta, NodeObject._TreeMeta );
+			ParentNodeMeta.Ignore.push('_TreeMeta');
+				
 			for ( let [Key,Value] of Object.entries(NodeObject) )
 			{
-				if ( Key == '_TreeMeta' )
+				//	ignore keys
+				if ( ParentNodeMeta.Ignore.includes(Key) )
 					continue;
 				
 				const ChildAddress = [...Address,Key];
-				let Child = document.createElement(TreeNodeElementType);
-				Parent.appendChild(Child);
+				const ChildElement = document.createElement(TreeNodeElementType);
+				ParentElement.appendChild(ChildElement);
 
 				const ChildIsObject = ( typeof Value == typeof {} );
 				
-				let NodeMeta = Object.assign( {}, Value._TreeMeta );
+				const NodeMeta = Object.assign( {}, Value._TreeMeta );
 				NodeMeta.ValueIsChild = ChildIsObject;
-				SetupTreeNodeElement( Child, ChildAddress, Value, NodeMeta );
+				SetupTreeNodeElement( ChildElement, ChildAddress, Value, NodeMeta );
 				
 				if ( NodeMeta.ValueIsChild )
 				{
-					RecursivelyAddObject( Value, Child, ChildAddress );
+					RecursivelyAddObject( Value, NodeObject, ChildElement, ChildAddress );
 				}
 			}
 		}
-		RecursivelyAddObject( Json, this.TreeContainer, [] );
+		RecursivelyAddObject( Json, {}, this.TreeContainer, [] );
 	}
 }
 

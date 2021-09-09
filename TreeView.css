@@ -11,7 +11,7 @@ div
 	
 	margin:		1px;
 	padding:	3px;
-	margin-left:	calc(var(--Indent)*10px);
+	margin-left:	calc(var(--Indent)*0.2em);
 
 	/* ios enable dragging, instead of draggable=true */
 	xxx-webkit-user-select: none;
