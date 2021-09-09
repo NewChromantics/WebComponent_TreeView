@@ -287,11 +287,14 @@ export default class TreeViewElement extends HTMLElement
 			
 		}
 		
+		let Label = Key;
+		if ( Meta.KeyAsLabel )
+			Label = Value[Meta.KeyAsLabel];
 		
 		if ( ValueIsChild )
-			Element.innerHTML = `<label>${Key}</label>`;
+			Element.innerHTML = `<label>${Label}</label>`;
 		else
-			Element.innerHTML = `<label>${Key}</label><span>${Value}</span>`;
+			Element.innerHTML = `<label>${Label}</label><span>${Value}</span>`;
 
 	}
 
