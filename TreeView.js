@@ -17,6 +17,8 @@ export default class TreeViewElement extends HTMLElement
 	constructor()
 	{
 		super();
+		
+		this.onchange = function(){};
 	}
 	
 	static ElementName()
@@ -90,6 +92,12 @@ export default class TreeViewElement extends HTMLElement
 		this.attributeChangedCallback();
 	}
 	
+	SetNewJson(Json)
+	{
+		this.json = Json;
+		this.onchange(Json);
+	}
+	
 	get TreeContainer()	{	return this.RootElement;	}
 
 	get TreeChildren()
@@ -99,21 +107,57 @@ export default class TreeViewElement extends HTMLElement
 		return Children;
 	}
 	
-	SetupTreeNodeElement(Element,Indent,Key,Value,Meta)
+	MoveData(OldAddress,NewAddress)
+	{
+		if ( OldAddress.every( (v,i) => NewAddress[i]==v ) )
+			throw `Detected drop on self`;
+			
+		const Json = this.json;
+		console.log(`Moving ${OldAddress} to ${NewAddress}`);
+
+		//	find the old parent, and the key of the parent (and the data we're moving)
+		let OldParent = Json;
+		for ( let ok=0;	ok<OldAddress.length-1;	ok++ )
+			OldParent = OldParent[OldAddress[ok]];
+		const OldLastKey = OldAddress[OldAddress.length-1];
+		let OldData = OldParent[OldLastKey];
+		
+		//	find the new parent
+		let NewParent = Json;
+		for ( let nk=0;	nk<NewAddress.length;	nk++ )
+			NewParent = NewParent[NewAddress[nk]];
+		//OldAddress.reduce( (Key,Obj) => Obj[Key], Json );
+
+		if ( NewParent.hasOwnProperty(OldLastKey) )
+			throw `New parent already has a key ${OldLastKey}`;
+		//	put the new data, with the same old key, onto the new parent
+		NewParent[OldLastKey] = OldData;
+		//	delete the old data from it's old parent
+		delete OldParent[OldLastKey];
+			
+		this.SetNewJson(Json);
+	}
+	
+	SetupTreeNodeElement(Element,Address,Value,Meta)
 	{
 		//	we will have a collapsable children
 		const ValueIsChild = Meta.ValueIsChild;
+		const Key = Address[Address.length-1];
+		const Indent = Address.length-1;
 		
 		//	set css variable
+		Element.Address = Address;
 		Element.Key = Key;
 		Element.Value = Value;
 		Element.style.setProperty(`--Indent`,Indent);
 		Element.style.setProperty(`--Key`,Key);
 		Element.style.setProperty(`--Value`,Value);
-		
+		Element.Droppable = Meta.Droppable;
 		
 		if ( Meta.Draggable )
 			Element.setAttribute('draggable',true);
+		if ( Meta.Droppable )
+			Element.setAttribute('droppable',true);
 			
 		//	on ios its a css choice
 		//	gr: not required https://stackoverflow.com/questions/6600950/native-html5-drag-and-drop-in-mobile-safari-ipad-ipod-iphone
@@ -123,6 +167,19 @@ export default class TreeViewElement extends HTMLElement
 		
 		function OnDragOver(Event)
 		{
+			let CanDrop = Element.Droppable;
+/*	dont have this data here!
+			//	dont allow drop on self
+			let OldAddress = Event.dataTransfer.getData('text/plain');
+			OldAddress = JSON.parse(OldAddress);
+			const NewAddress = Element.Address;
+			if ( OldAddress.all( (v,i) => NewAddress[i]==v ) )
+				CanDrop = false;
+			*/
+			//	let dragover propogate
+			if ( !CanDrop )
+				return;
+			
 			//	continuously called
 			//console.log(`OnDragOver ${Key}`);
 			Element.setAttribute('DragOver',true);
@@ -144,10 +201,20 @@ export default class TreeViewElement extends HTMLElement
 		}
 		function OnDrop(Event)
 		{
-			console.log(`OnDrop ${Key}`);
+			console.log(`OnDrop ${Key}`,Element);
+			let CanDrop = Element.Droppable;
+			//	let dragover propogate
+			if ( !CanDrop )
+				return;
+				
 			Element.removeAttribute('DragOver');
 			Event.preventDefault();
 			Event.stopPropagation();	//	dont need to pass to parent
+			
+			//	move source object to dropped object
+			const OldAddress = JSON.parse(Event.dataTransfer.getData('text/plain'));
+			const NewAddress = Element.Address;
+			this.MoveData(OldAddress,NewAddress);
 		}
 		
 		function OnDragStart(Event)
@@ -155,7 +222,7 @@ export default class TreeViewElement extends HTMLElement
 			//console.log(`OnDragStart ${Key}`);
 			//Event.dataTransfer.effectAllowed = 'all';
 			Event.dataTransfer.dropEffect = 'link';	//	copy move link none
-			Event.dataTransfer.setData('text/plain', 'hello');
+			Event.dataTransfer.setData('text/plain', JSON.stringify(Address) );
 			
 			Event.stopPropagation();	//	stops multiple objects being dragged
 			//Event.preventDefault();	//	this stops drag entirely
@@ -164,7 +231,7 @@ export default class TreeViewElement extends HTMLElement
 		
 		function OnDragEnd(Event)
 		{
-			console.log(`OnDragEnd ${Key}`);
+			//console.log(`OnDragEnd ${Key}`);
 			Element.removeAttribute('DragOver');			
 			
 			//	dont need to tell parent
@@ -178,7 +245,10 @@ export default class TreeViewElement extends HTMLElement
 		}
 		function OnDragEnter(Event)
 		{
-			console.log(`OnDragEnter ${Key}`);
+			let CanDrop = Element.Droppable;
+			if ( !CanDrop )
+				return;
+			//console.log(`OnDragEnter ${Key}`);
 			//	this to allow this as a drop target
 			Event.preventDefault();
 			return true;
@@ -189,7 +259,7 @@ export default class TreeViewElement extends HTMLElement
 		Element.addEventListener('drag',OnDrag);	//	would be good to allow temporary effects
 		Element.addEventListener('dragend',OnDragEnd);
 
-		Element.addEventListener('drop',OnDrop);
+		Element.addEventListener('drop',OnDrop.bind(this));
 		Element.addEventListener('dragover',OnDragOver);
 		Element.addEventListener('dragleave',OnDragLeave);
 		
@@ -245,13 +315,14 @@ export default class TreeViewElement extends HTMLElement
 		
 		let SetupTreeNodeElement = this.SetupTreeNodeElement.bind(this);
 		
-		function RecursivelyAddObject(NodeObject,Parent,Indent=0)
+		function RecursivelyAddObject(NodeObject,Parent,Address)
 		{
 			for ( let [Key,Value] of Object.entries(NodeObject) )
 			{
 				if ( Key == '_TreeMeta' )
 					continue;
-					
+				
+				const ChildAddress = [...Address,Key];
 				let Child = document.createElement(TreeNodeElementType);
 				Parent.appendChild(Child);
 
@@ -259,15 +330,15 @@ export default class TreeViewElement extends HTMLElement
 				
 				let NodeMeta = Object.assign( {}, Value._TreeMeta );
 				NodeMeta.ValueIsChild = ChildIsObject;
-				SetupTreeNodeElement( Child, Indent, Key, Value, NodeMeta );
+				SetupTreeNodeElement( Child, ChildAddress, Value, NodeMeta );
 				
 				if ( NodeMeta.ValueIsChild )
 				{
-					RecursivelyAddObject( Value, Child, Indent+1 );
+					RecursivelyAddObject( Value, Child, ChildAddress );
 				}
 			}
 		}
-		RecursivelyAddObject( Json, this.TreeContainer );
+		RecursivelyAddObject( Json, this.TreeContainer, [] );
 	}
 }
 
