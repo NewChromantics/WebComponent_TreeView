@@ -128,10 +128,16 @@ export default class TreeViewElement extends HTMLElement
 			NewParent = NewParent[NewAddress[nk]];
 		//OldAddress.reduce( (Key,Obj) => Obj[Key], Json );
 
-		if ( NewParent.hasOwnProperty(OldLastKey) )
-			throw `New parent already has a key ${OldLastKey}`;
+		//	allow dropping onto something with the same key by adding a suffix to the key
+		let NewKey = OldLastKey;
+		while ( NewParent.hasOwnProperty(NewKey) )
+		{
+			NewKey += '+';
+		}
+		if ( NewParent.hasOwnProperty(NewKey) )
+			throw `New parent already has a key ${NewKey}`;
 		//	put the new data, with the same old key, onto the new parent
-		NewParent[OldLastKey] = OldData;
+		NewParent[NewKey] = OldData;
 		//	delete the old data from it's old parent
 		delete OldParent[OldLastKey];
 			
