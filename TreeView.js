@@ -95,13 +95,14 @@ export default class TreeViewElement extends HTMLElement
 	get TreeChildren()
 	{
 		let Children = Array.from( this.TreeContainer.children );
-		Children = Children.filter( e => e instanceof TreeNodeElement );
+		Children = Children.filter( e => e instanceof TreeNodeElement || e instanceof HTMLDivElement );
 		return Children;
 	}
 	
-	SetupTreeNodeElement(Element,Indent,Key,Value)
+	SetupTreeNodeElement(Element,Indent,Key,Value,Meta)
 	{
-		const IsObject = typeof Value == typeof {};
+		//	we will have a collapsable children
+		const ValueIsChild = Meta.ValueIsChild;
 		
 		//	set css variable
 		Element.Key = Key;
@@ -111,7 +112,9 @@ export default class TreeViewElement extends HTMLElement
 		Element.style.setProperty(`--Value`,Value);
 		
 		
-		Element.setAttribute('draggable',true);
+		if ( Meta.Draggable )
+			Element.setAttribute('draggable',true);
+			
 		//	on ios its a css choice
 		//	gr: not required https://stackoverflow.com/questions/6600950/native-html5-drag-and-drop-in-mobile-safari-ipad-ipod-iphone
 		Element.style.setProperty('webkitUserDrag','element');
@@ -194,7 +197,7 @@ export default class TreeViewElement extends HTMLElement
 		
 		//	toggle collapsable
 		//	attribute only exists on collapsable objects
-		if ( IsObject )
+		if ( ValueIsChild )
 		{
 			Element.setAttribute('Collapsed',false);
 			
@@ -209,10 +212,10 @@ export default class TreeViewElement extends HTMLElement
 		}
 		
 		
-		if ( IsObject )
-			Element.innerHTML = ` ${Key}`;
+		if ( ValueIsChild )
+			Element.innerHTML = `<label>${Key}</label>`;
 		else
-			Element.innerHTML = `${Key}: ${Value}`;
+			Element.innerHTML = `<label>${Key}</label><span>${Value}</span>`;
 
 	}
 
@@ -227,6 +230,8 @@ export default class TreeViewElement extends HTMLElement
 		//const TreeNodeElementType = TreeNodeElement.ElementName();
 		const TreeNodeElementType = 'div';
 		
+		//	todo: give every item an address;
+		//	[key,key,key,key] so we can identify nodes & elements
 		//	all elements for now
 		while ( this.TreeChildren.length > 0 )
 		{
@@ -244,11 +249,19 @@ export default class TreeViewElement extends HTMLElement
 		{
 			for ( let [Key,Value] of Object.entries(NodeObject) )
 			{
+				if ( Key == '_TreeMeta' )
+					continue;
+					
 				let Child = document.createElement(TreeNodeElementType);
 				Parent.appendChild(Child);
-				SetupTreeNodeElement( Child, Indent, Key, Value );
+
+				const ChildIsObject = ( typeof Value == typeof {} );
 				
-				if ( typeof Value == typeof {} )
+				let NodeMeta = Object.assign( {}, Value._TreeMeta );
+				NodeMeta.ValueIsChild = ChildIsObject;
+				SetupTreeNodeElement( Child, Indent, Key, Value, NodeMeta );
+				
+				if ( NodeMeta.ValueIsChild )
 				{
 					RecursivelyAddObject( Value, Child, Indent+1 );
 				}

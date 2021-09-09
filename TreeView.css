@@ -1,45 +1,56 @@
-*
+label
+{
+	font-weight:	bold;
+	margin-right:	1em;
+}
+
+
+div
 {
 	--Indent:		0;
 	
-	margin:		10px;
+	margin:		1px;
 	padding:	3px;
-	margin-left:	calc(var(--Indent)*20px);
+	margin-left:	calc(var(--Indent)*10px);
 
 	/* ios enable dragging, instead of draggable=true */
 	xxx-webkit-user-select: none;
 }
 
-*[DragOver]
+div[DragOver]
 {
 	border-bottom:	dashed red 1px;
 	margin-bottom:	-1px;	/* undo border change of size */
 }
 
 /* disable pointer events, except on the :before where our error is */
-*[Collapsed]
+div[Collapsed]
 {
 	xxpointer-events: none;
 }
-*[Collapsed]:before
+div[Collapsed]:before
 {
 	pointer-events: auto;
 	cursor:			pointer;
 }
+div[Collapsed]:hover:before
+{
+	background:	red;
+}
 
 
 /* hide children when collapsed */
-*[Collapsed=true] *
+div[Collapsed=true] *:not(label)
 {
 	display:	none;
 }
 
-*[Collapsed=true]:before
+div[Collapsed=false]:before
 {
 	content:	"\25BE";	/*hex html code*/
 }
 
-*[Collapsed=false]:before
+div[Collapsed=true]:before
 {
 	content:	"\25B8";
 }
