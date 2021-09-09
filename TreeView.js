@@ -326,15 +326,15 @@ export default class TreeViewElement extends HTMLElement
 		
 		function RecursivelyAddObject(NodeObject,ParentNode,ParentElement,Address)
 		{
-			let ParentNodeMeta = {};
-			ParentNodeMeta.Ignore = [];
-			Object.assign( ParentNodeMeta, NodeObject._TreeMeta );
-			ParentNodeMeta.Ignore.push('_TreeMeta');
+			let NodeMeta = {};
+			NodeMeta.Ignore = [];
+			Object.assign( NodeMeta, NodeObject._TreeMeta );
+			NodeMeta.Ignore.push('_TreeMeta');
 				
 			for ( let [Key,Value] of Object.entries(NodeObject) )
 			{
 				//	ignore keys
-				if ( ParentNodeMeta.Ignore.includes(Key) )
+				if ( NodeMeta.Ignore.includes(Key) )
 					continue;
 				
 				const ChildAddress = [...Address,Key];
@@ -343,11 +343,11 @@ export default class TreeViewElement extends HTMLElement
 
 				const ChildIsObject = ( typeof Value == typeof {} );
 				
-				const NodeMeta = Object.assign( {}, Value._TreeMeta );
-				NodeMeta.ValueIsChild = ChildIsObject;
-				SetupTreeNodeElement( ChildElement, ChildAddress, Value, NodeMeta );
+				const ChildNodeMeta = Object.assign( {}, Value._TreeMeta );
+				ChildNodeMeta.ValueIsChild = ChildIsObject;
+				SetupTreeNodeElement( ChildElement, ChildAddress, Value, ChildNodeMeta );
 				
-				if ( NodeMeta.ValueIsChild )
+				if ( ChildNodeMeta.ValueIsChild )
 				{
 					RecursivelyAddObject( Value, NodeObject, ChildElement, ChildAddress );
 				}
