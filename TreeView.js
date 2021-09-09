@@ -275,7 +275,7 @@ export default class TreeViewElement extends HTMLElement
 		//	attribute only exists on collapsable objects
 		if ( ValueIsChild )
 		{
-			Element.setAttribute('Collapsed',false);
+			Element.setAttribute('Collapsed',Meta.Collapsed==true);
 			
 			Element.onclick = function(Event)
 			{
