@@ -151,6 +151,21 @@ export default class TreeViewElement extends HTMLElement
 		const Key = Address[Address.length-1];
 		const Indent = Address.length-1;
 		
+		//	for convinence, put all properties as attributes so we can easily style stuff in css
+		if ( typeof Value == typeof {} )
+		{
+			for ( let [PropertyKey,PropertyValue] of Object.entries(Value) )
+			{
+				//	not all attributes names are allowed
+				//	must start with a-zA-Z etc
+				try
+				{
+					Element.setAttribute(PropertyKey,PropertyValue);
+				}
+				catch{};
+			}
+		}
+		
 		//	set css variable
 		Element.Address = Address;
 		Element.Key = Key;
