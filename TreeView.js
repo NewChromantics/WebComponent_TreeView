@@ -18,7 +18,14 @@ export default class TreeViewElement extends HTMLElement
 	{
 		super();
 		
-		this.onchange = function(){};
+		this.onchange = function(NewJson,Change)
+		{
+			console.log(`TreeViewElement change; ${JSON.stringify(Change,null,'\t')}`);
+		};
+		this.onselectionchange = function(NewSelections)
+		{
+			console.log(`TreeViewElement now selected; ${NewSelections}`);
+		}
 	}
 	
 	static ElementName()
@@ -92,10 +99,10 @@ export default class TreeViewElement extends HTMLElement
 		this.attributeChangedCallback();
 	}
 	
-	SetNewJson(Json)
+	SetNewJson(Json,Change)
 	{
 		this.json = Json;
-		this.onchange(Json);
+		this.onchange(Json,Change);
 	}
 	
 	get TreeContainer()	{	return this.RootElement;	}
@@ -141,7 +148,52 @@ export default class TreeViewElement extends HTMLElement
 		//	delete the old data from it's old parent
 		delete OldParent[OldLastKey];
 			
-		this.SetNewJson(Json);
+		const Change = {};
+		Change.Address = OldAddress;
+		Change.MovedTo = NewAddress;
+		this.SetNewJson(Json,Change);
+	}
+	
+	ToggleSelected(Elements,KeepExisting)
+	{
+		let SelectedElements = [];
+		function Traverse(Element)
+		{
+			const ToggleThis = Elements.includes(Element);
+			let WasSelected = Element.hasAttribute('Selected');
+			if ( ToggleThis )
+			{
+				if ( !WasSelected )
+				{
+					Element.setAttribute('Selected',true);
+					SelectedElements.push(Element);
+				}
+				else
+				{
+					Element.removeAttribute('Selected');
+				}
+			}
+			else if ( !KeepExisting )
+			{
+				Element.removeAttribute('Selected');
+			}
+			else if ( WasSelected )
+			{
+				SelectedElements.push(Element);
+			}
+			
+			for ( let Child of Element.children )
+			{
+				Traverse(Child);
+			}
+		}
+
+		const TreeChildren = this.TreeChildren;
+		TreeChildren.forEach( Traverse );
+		
+		let SelectedAddresses = SelectedElements.map( e => e.Address );
+		SelectedAddresses = SelectedAddresses.filter( a => a!=null );
+		this.onselectionchange(SelectedAddresses);
 	}
 	
 	SetupTreeNodeElement(Element,Address,Value,Meta)
@@ -176,9 +228,11 @@ export default class TreeViewElement extends HTMLElement
 		Element.Droppable = Meta.Droppable;
 		
 		if ( Meta.Draggable )
-			Element.setAttribute('draggable',true);
+			Element.setAttribute('Draggable',true);
 		if ( Meta.Droppable )
-			Element.setAttribute('droppable',true);
+			Element.setAttribute('Droppable',true);
+		if ( Meta.Selected )
+			Element.setAttribute('Selected',true);
 			
 		//	on ios its a css choice
 		//	gr: not required https://stackoverflow.com/questions/6600950/native-html5-drag-and-drop-in-mobile-safari-ipad-ipod-iphone
@@ -284,33 +338,51 @@ export default class TreeViewElement extends HTMLElement
 		Element.addEventListener('dragover',OnDragOver);
 		Element.addEventListener('dragleave',OnDragLeave);
 		
-		
+		Element.onclick = function(Event)
+		{
+			const AppendSelect = Event.shiftKey;
+			this.ToggleSelected( [Element],AppendSelect);
+
+			Event.stopPropagation();
+			Event.preventDefault();
+		}.bind(this);
 		
 		//	toggle collapsable
 		//	attribute only exists on collapsable objects
 		if ( ValueIsChild )
 		{
 			Element.setAttribute('Collapsed',Meta.Collapsed==true);
+		}
+		
+		if ( ValueIsChild )
+		{
+			let Collapser = document.createElement('button');
+			Collapser.className = 'Collapser';
+			Element.appendChild(Collapser);	
 			
-			Element.onclick = function(Event)
+			Collapser.onclick = function(Event)
 			{
 				let Collapsed = Element.getAttribute('Collapsed') == 'true';
 				Collapsed = !Collapsed;
 				Element.setAttribute('Collapsed',Collapsed);
 				Event.stopPropagation();
 			}
-			
 		}
+		
 		
 		let Label = Key;
 		if ( Meta.KeyAsLabel )
 			Label = Value[Meta.KeyAsLabel];
+		let LabelElement = document.createElement('label');
+		LabelElement.innerText = Label;
+		Element.appendChild(LabelElement);	
 		
-		if ( ValueIsChild )
-			Element.innerHTML = `<label>${Label}</label>`;
-		else
-			Element.innerHTML = `<label>${Label}</label><span>${Value}</span>`;
-
+		if ( !ValueIsChild )
+		{
+			let ValueElement = document.createElement('span');
+			ValueElement.innertText = Value;
+			Element.appendChild(ValueElement);	
+		}
 	}
 
 	UpdateTreeElements()

@@ -19,38 +19,44 @@ div
 
 div[DragOver]
 {
-	border-bottom:	dashed red 1px;
-	margin-bottom:	-1px;	/* undo border change of size */
+	outline:	dashed red 1px;
 }
 
-/* disable pointer events, except on the :before where our error is */
-div[Collapsed]
+div[Collapsed]:hover
 {
-	xxpointer-events: none;
+	outline:		1px dashed rgba(0,0,0,0.2);
 }
-div[Collapsed]:before
+div[Selected]
 {
-	pointer-events: auto;
+	outline:		1px dashed rgba(0,0,1,1.0) !important;
+}
+
+
+.Collapser
+{
 	cursor:			pointer;
-}
-div[Collapsed]:hover:before
-{
-	background:	red;
+	margin-right:	0.4em;
+	border:			none;
+	background:		rgba(0,0,0,0);
 }
 
+.Collapser:hover
+{
+	background:		rgba(0,0,0,0.2);
+}
 
 /* hide children when collapsed */
-div[Collapsed=true] *:not(label)
+div[Collapsed=true] *:not(label):not(.Collapser)
 {
 	display:	none;
 }
 
-div[Collapsed=false]:before
+div[Collapsed=false] .Collapser:before
 {
 	content:	"\25BE";	/*hex html code*/
 }
 
-div[Collapsed=true]:before
+div[Collapsed=true] .Collapser:before
 {
 	content:	"\25B8";
 }
