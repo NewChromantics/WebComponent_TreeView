@@ -210,6 +210,16 @@ export default class TreeViewElement extends HTMLElement
 			{
 				//	not all attributes names are allowed
 				//	must start with a-zA-Z etc
+				
+				//	todo regex when this needs to get more complicated
+				//	try and avoid throwing to help debugging
+				if ( PropertyKey.length == 0 )
+					continue;
+				const KeyNumber = Number(PropertyKey[0]);
+				const KeyStartsWithNumber = !isNaN(KeyNumber);
+				if ( KeyStartsWithNumber )
+					continue;
+					
 				try
 				{
 					Element.setAttribute(PropertyKey,PropertyValue);
