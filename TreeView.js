@@ -48,6 +48,9 @@ export default class TreeViewElement extends HTMLElement
 		try
 		{
 			let Value = this.getAttribute('json');
+			//	null attribute resolves to null, which is an object (so parses). Catch it
+			if ( Value == null )
+				return {};
 			return JSON.parse(Value);
 		}
 		catch(e)
