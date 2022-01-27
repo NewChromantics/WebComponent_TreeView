@@ -77,6 +77,9 @@ export default class TreeViewElement extends HTMLElement
 		// attach the created elements to the shadow dom
 		Parent.appendChild(this.Style);
 		Parent.appendChild(this.RootElement);
+		
+		//	initialise if json attribute is set
+		this.UpdateTreeElements();
 	}
 	
 	attributeChangedCallback(name, oldValue, newValue) 
