@@ -396,7 +396,7 @@ export default class TreeViewElement extends HTMLElement
 		if ( !ValueIsChild )
 		{
 			let ValueElement = document.createElement('span');
-			ValueElement.innertText = Value;
+			ValueElement.innerText = Value;
 			Element.appendChild(ValueElement);	
 		}
 	}
