@@ -206,6 +206,7 @@ export default class TreeViewElement extends HTMLElement
 	{
 		//	we will have a collapsable children
 		const ValueIsChild = Meta.ValueIsChild;
+		const ValueKeys = Object.keys(Value).filter( Key => !Meta.Ignore.includes(Key) );
 		const Key = Address[Address.length-1];
 		const Indent = Address.length-1;
 		
@@ -389,6 +390,13 @@ export default class TreeViewElement extends HTMLElement
 		let Label = Key;
 		if ( Meta.KeyAsLabel )
 			Label = Value[Meta.KeyAsLabel];
+		if ( Meta.ShowChildCount )
+		{
+			//	todo: change this to an attrib and display with css
+			//	.keys() works on array or object
+			const ChildCount = ValueKeys.length;
+			Label += ` x${ChildCount}`;
+		}
 		let LabelElement = document.createElement('label');
 		LabelElement.innerText = Label;
 		Element.appendChild(LabelElement);	
@@ -427,12 +435,23 @@ export default class TreeViewElement extends HTMLElement
 		
 		let SetupTreeNodeElement = this.SetupTreeNodeElement.bind(this);
 		
+		function GetDefaultNodeMeta()
+		{
+			const Meta = {};
+			Meta.Ignore = [];
+			return Meta;
+		}
+		function GetNodeMeta(NodeObject)
+		{
+			let Meta = GetDefaultNodeMeta();
+			Meta = Object.assign( Meta, NodeObject._TreeMeta );
+			Meta.Ignore.push('_TreeMeta');
+			return Meta;
+		}
+		
 		function RecursivelyAddObject(NodeObject,ParentNode,ParentElement,Address)
 		{
-			let NodeMeta = {};
-			NodeMeta.Ignore = [];
-			Object.assign( NodeMeta, NodeObject._TreeMeta );
-			NodeMeta.Ignore.push('_TreeMeta');
+			let NodeMeta = GetNodeMeta(NodeObject);
 				
 			for ( let [Key,Value] of Object.entries(NodeObject) )
 			{
@@ -446,7 +465,7 @@ export default class TreeViewElement extends HTMLElement
 
 				const ChildIsObject = ( typeof Value == typeof {} );
 				
-				const ChildNodeMeta = Object.assign( {}, Value._TreeMeta );
+				const ChildNodeMeta = GetNodeMeta(Value);
 				ChildNodeMeta.ValueIsChild = ChildIsObject;
 				SetupTreeNodeElement( ChildElement, ChildAddress, Value, ChildNodeMeta );
 				
