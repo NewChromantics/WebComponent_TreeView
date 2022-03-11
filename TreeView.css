@@ -9,9 +9,9 @@ div
 {
 	--Indent:		0;
 	
-	margin:		1px;
-	padding:	3px;
-	margin-left:	calc(var(--Indent)*0.2em);
+	margin:			0.05em;
+	padding:		0.05em;
+	margin-left:	calc(var(--Indent)*0.3em);
 
 	/* ios enable dragging, instead of draggable=true */
 	xxx-webkit-user-select: none;
