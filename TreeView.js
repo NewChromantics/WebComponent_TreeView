@@ -206,12 +206,12 @@ export default class TreeViewElement extends HTMLElement
 	{
 		//	we will have a collapsable children
 		const ValueIsChild = Meta.ValueIsChild;
-		const ValueKeys = Object.keys(Value).filter( Key => !Meta.Ignore.includes(Key) );
+		const ValueKeys = Object.keys(Value||{}).filter( Key => !Meta.Ignore.includes(Key) );
 		const Key = Address[Address.length-1];
 		const Indent = Address.length-1;
 		
 		//	for convinence, put all properties as attributes so we can easily style stuff in css
-		if ( typeof Value == typeof {} )
+		if ( (typeof Value == typeof {}) && Value!=null )
 		{
 			for ( let [PropertyKey,PropertyValue] of Object.entries(Value) )
 			{
@@ -443,6 +443,8 @@ export default class TreeViewElement extends HTMLElement
 		}
 		function GetNodeMeta(NodeObject)
 		{
+			if ( !NodeObject )
+				NodeObject = {};
 			let Meta = GetDefaultNodeMeta();
 			Meta = Object.assign( Meta, NodeObject._TreeMeta );
 			Meta.Ignore.push('_TreeMeta');
@@ -463,7 +465,7 @@ export default class TreeViewElement extends HTMLElement
 				const ChildElement = document.createElement(TreeNodeElementType);
 				ParentElement.appendChild(ChildElement);
 
-				const ChildIsObject = ( typeof Value == typeof {} );
+				const ChildIsObject = Value!==null && ( typeof Value == typeof {} );
 				
 				const ChildNodeMeta = GetNodeMeta(Value);
 				ChildNodeMeta.ValueIsChild = ChildIsObject;
