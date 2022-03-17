@@ -36,7 +36,7 @@ let Test = {};
 Test.Cat = 'Furry';
 Test.Fish = 'Wet';
 Test.Circle = {};
-	Test.Circle.Position = [0,1,2,{}];
+	Test.Circle.Position = [0,1,2,{"Hello":true}];
 	Test.Circle.Radius = 3;
 
 async function OverwriteLoop()
@@ -60,6 +60,7 @@ const Meta = {};
 Meta.Circle = { Collapsed:true };
 Meta['Circle.Position'] = { Collapsed:true };
 Meta['Circle.Position.2'] = { Visible:false };
+Meta['Circle.Position.3.Hello'] = { Writable:true };
 TestTree.meta = Meta;
 
 </script>

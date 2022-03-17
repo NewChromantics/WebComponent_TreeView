@@ -39,6 +39,21 @@ function JsonToString(Value)
 	return Value;
 }
 
+function SetAttributeTrueOrRemove(Element,Attribute,Boolean,Value)
+{
+	Value = (Value===undefined) ? Boolean : Value;
+	 
+	//	todo: minimise dom changes
+	if ( Boolean )
+	{
+		Element.setAttribute(Attribute,Value);
+	}
+	else
+	{
+		Element.removeAttribute(Attribute);
+	}
+}
+
 
 export default class TreeViewElement extends HTMLElement 
 {
@@ -219,9 +234,17 @@ export default class TreeViewElement extends HTMLElement
 	SetupNewTreeNodeElement(Element,Address,Value,Meta,ValueIsChild)
 	{
 		const Key = Address[Address.length-1];
+		const Indent = Address.length-1;
+
 		Element.Address = Address;
 		Element.AddressKey = this.GetAddressKey(Address);
+
+		Element.style.setProperty(`--Indent`,Indent);
 		Element.Key = Key;
+		Element.style.setProperty(`--Key`,Key);
+		
+		//	minimise changes by setting initial values
+		
 
 		//	on ios its a css choice
 		//	gr: not required https://stackoverflow.com/questions/6600950/native-html5-drag-and-drop-in-mobile-safari-ipad-ipod-iphone
@@ -370,7 +393,6 @@ export default class TreeViewElement extends HTMLElement
 		//	we will have a collapsable children
 		const ValueKeys = ValueIsChild ? Object.keys(Value) : [];
 		const Key = Address[Address.length-1];
-		const Indent = Address.length-1;
 		
 		//	for convinence, put all properties as attributes so we can easily style stuff in css
 		if ( ValueIsChild )
@@ -397,30 +419,16 @@ export default class TreeViewElement extends HTMLElement
 			}
 		}
 		
-		//	set css variable
-		Element.Value = Value;
-		Element.style.setProperty(`--Indent`,Indent);
-		Element.style.setProperty(`--Key`,Key);
-		Element.style.setProperty(`--Value`,Value);
-		Element.Droppable = Meta.Droppable;
-		
-		if ( Meta.Draggable )
-			Element.setAttribute('Draggable',true);
-		if ( Meta.Droppable )
-			Element.setAttribute('Droppable',true);
-		if ( Meta.Selected )
-			Element.setAttribute('Selected',true);
-		else
-			Element.removeAttribute('Selected');
-			
-		
-		//	toggle collapsable
-		//	attribute only exists on collapsable objects
-		if ( ValueIsChild )
+		//	Minimise changse
+		if ( Element.Value !== Value )
 		{
-			Element.setAttribute('Collapsed',Meta.Collapsed==true);
+			Element.Value = Value;
+			Element.style.setProperty(`--Value`,Value);
+
+			let ValueElement = Array.from(Element.children).find( e => e.nodeName == 'SPAN' );
+			if ( ValueElement )
+				ValueElement.innerText = Value;
 		}
-		
 		
 		
 		let Label = Key;
@@ -436,11 +444,16 @@ export default class TreeViewElement extends HTMLElement
 		let LabelElement = Array.from(Element.children).find( e => e.nodeName == 'LABEL' );
 		if ( LabelElement )
 			LabelElement.innerText = Label;
-
-		let ValueElement = Array.from(Element.children).find( e => e.nodeName == 'SPAN' );
-		if ( ValueElement )
-			ValueElement.innerText = Value;
 		
+		
+		//	update meta
+		Element.Droppable = Meta.Droppable;
+		
+		SetAttributeTrueOrRemove( Element, 'Draggable', Meta.Draggable );
+		SetAttributeTrueOrRemove( Element, 'Droppable', Meta.Droppable );
+		SetAttributeTrueOrRemove( Element, 'Selected', Meta.Selected );
+		//	attribute only exists on collapsable objects
+		SetAttributeTrueOrRemove( Element, 'Collapsed', ValueIsChild, Meta.Collapsed );
 	}
 	
 	GetAddressKey(Address)
@@ -495,28 +508,12 @@ export default class TreeViewElement extends HTMLElement
 		//const TreeNodeElementType = TreeNodeElement.ElementName();
 		const TreeNodeElementType = 'div';
 		
-		/*
-		//	todo: give every item an address;
-		//	[key,key,key,key] so we can identify nodes & elements
-		//	all elements for now
-		while ( this.TreeChildren.length > 0 )
-		{
-			const LastIndex = this.TreeChildren.length-1;
-			this.TreeContainer.removeChild( this.TreeChildren[LastIndex] );
-		}
-		*/
-		
 		//	should we put this logic in tree-node and recurse automatically?...
 		//	may be harder to do edits
 		let Parent = this.TreeContainer;
 		
-		let SetupTreeNodeElement = this.SetupTreeNodeElement.bind(this);
-		
-		
 		function RecursivelyUpdateObject(NodeObject,ParentNode,ParentElement,Address)
 		{
-			//let NodeMeta = this.GetNodeMeta(Address);
-				
 			for ( let [Key,Value] of Object.entries(NodeObject) )
 			{
 				const ChildAddress = [...Address,Key];
