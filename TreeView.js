@@ -12,6 +12,34 @@ export class TreeNodeElement extends HTMLElement
 	
 }
 
+//	todo; use a symbol that can't be a key character other wise ['x.x'].y isn't going to work
+//		but still wants to be usable for users
+const AddressDelin = '.';
+
+function AsObjectSafe(Value,Default={})
+{
+	try
+	{
+		//	null attribute resolves to null, which is an object (so parses). Catch it
+		if ( Value == null )
+			return {};
+		return JSON.parse(Value);
+	}
+	catch(e)
+	{
+		return {};
+	}
+}
+
+function JsonToString(Value)
+{
+	//	todo: detect setting an object
+	if ( typeof Value != typeof '' )
+		Value = JSON.stringify(Value);
+	return Value;
+}
+
+
 export default class TreeViewElement extends HTMLElement 
 {
 	constructor()
@@ -39,32 +67,14 @@ export default class TreeViewElement extends HTMLElement
 	
 	static get observedAttributes() 
 	{
-		return ['json','css'];
+		return ['json','meta','css'];
 	}
 	
 	//	get json attribute as object
-	get json()			
-	{
-		try
-		{
-			let Value = this.getAttribute('json');
-			//	null attribute resolves to null, which is an object (so parses). Catch it
-			if ( Value == null )
-				return {};
-			return JSON.parse(Value);
-		}
-		catch(e)
-		{
-			return {};
-		}
-	}
-	//	todo: detect setting an object
-	set json(Value)	
-	{
-		if ( typeof Value != typeof '' )
-			Value = JSON.stringify(Value);
-		this.setAttribute('json', Value);	
-	}
+	get json()		{	return AsObjectSafe( this.getAttribute('json') );	}
+	set json(Value)	{	this.setAttribute('json', JsonToString(Value) );	}
+	get meta()		{	return AsObjectSafe( this.getAttribute('meta') );	}
+	set meta(Value)	{	this.setAttribute('meta', JsonToString(Value) );	}
 	
 	get css()			{	return this.getAttribute('css');	}
 	set css(Css)		{	Css ? this.setAttribute('css', Css) : this.removeAttribute('css');	}
@@ -88,6 +98,8 @@ export default class TreeViewElement extends HTMLElement
 	attributeChangedCallback(name, oldValue, newValue) 
 	{
 		if ( name == 'json' )
+			this.UpdateTreeElements();
+		if ( name == 'meta' )
 			this.UpdateTreeElements();
 		
 		if ( this.Style )
@@ -199,58 +211,18 @@ export default class TreeViewElement extends HTMLElement
 		
 		let SelectedAddresses = SelectedElements.map( e => e.Address );
 		SelectedAddresses = SelectedAddresses.filter( a => a!=null );
+		SelectedAddresses.forEach( a => this.SetNodeMeta(a,'Selected',true) );
+		
 		this.onselectionchange(SelectedAddresses);
 	}
 	
-	SetupTreeNodeElement(Element,Address,Value,Meta)
+	SetupNewTreeNodeElement(Element,Address,Value,Meta,ValueIsChild)
 	{
-		//	we will have a collapsable children
-		const ValueIsChild = Meta.ValueIsChild;
-		const ValueKeys = Object.keys(Value||{}).filter( Key => !Meta.Ignore.includes(Key) );
 		const Key = Address[Address.length-1];
-		const Indent = Address.length-1;
-		
-		//	for convinence, put all properties as attributes so we can easily style stuff in css
-		if ( (typeof Value == typeof {}) && Value!=null )
-		{
-			for ( let [PropertyKey,PropertyValue] of Object.entries(Value) )
-			{
-				//	not all attributes names are allowed
-				//	must start with a-zA-Z etc
-				
-				//	todo regex when this needs to get more complicated
-				//	try and avoid throwing to help debugging
-				if ( PropertyKey.length == 0 )
-					continue;
-				const KeyNumber = Number(PropertyKey[0]);
-				const KeyStartsWithNumber = !isNaN(KeyNumber);
-				if ( KeyStartsWithNumber )
-					continue;
-					
-				try
-				{
-					Element.setAttribute(PropertyKey,PropertyValue);
-				}
-				catch{};
-			}
-		}
-		
-		//	set css variable
 		Element.Address = Address;
+		Element.AddressKey = this.GetAddressKey(Address);
 		Element.Key = Key;
-		Element.Value = Value;
-		Element.style.setProperty(`--Indent`,Indent);
-		Element.style.setProperty(`--Key`,Key);
-		Element.style.setProperty(`--Value`,Value);
-		Element.Droppable = Meta.Droppable;
-		
-		if ( Meta.Draggable )
-			Element.setAttribute('Draggable',true);
-		if ( Meta.Droppable )
-			Element.setAttribute('Droppable',true);
-		if ( Meta.Selected )
-			Element.setAttribute('Selected',true);
-			
+
 		//	on ios its a css choice
 		//	gr: not required https://stackoverflow.com/questions/6600950/native-html5-drag-and-drop-in-mobile-safari-ipad-ipod-iphone
 		Element.style.setProperty('webkitUserDrag','element');
@@ -364,13 +336,6 @@ export default class TreeViewElement extends HTMLElement
 			Event.preventDefault();
 		}.bind(this);
 		
-		//	toggle collapsable
-		//	attribute only exists on collapsable objects
-		if ( ValueIsChild )
-		{
-			Element.setAttribute('Collapsed',Meta.Collapsed==true);
-		}
-		
 		if ( ValueIsChild )
 		{
 			let Collapser = document.createElement('button');
@@ -382,9 +347,80 @@ export default class TreeViewElement extends HTMLElement
 				let Collapsed = Element.getAttribute('Collapsed') == 'true';
 				Collapsed = !Collapsed;
 				Element.setAttribute('Collapsed',Collapsed);
+				this.SetNodeMeta(Element.Address,'Collapsed',Collapsed);		
 				Event.stopPropagation();
+			}.bind(this);
+		}
+		
+		
+		let LabelElement = document.createElement('label');
+		LabelElement.innerText = 'LABEL';
+		Element.appendChild(LabelElement);	
+
+		if ( !ValueIsChild )
+		{
+			let ValueElement = document.createElement('span');
+			ValueElement.innerText = 'VALUE';
+			Element.appendChild(ValueElement);	
+		}
+	}
+	
+	SetupTreeNodeElement(Element,Address,Value,Meta,ValueIsChild)
+	{
+		//	we will have a collapsable children
+		const ValueKeys = ValueIsChild ? Object.keys(Value) : [];
+		const Key = Address[Address.length-1];
+		const Indent = Address.length-1;
+		
+		//	for convinence, put all properties as attributes so we can easily style stuff in css
+		if ( ValueIsChild )
+		{
+			for ( let [PropertyKey,PropertyValue] of Object.entries(Value) )
+			{
+				//	not all attributes names are allowed
+				//	must start with a-zA-Z etc
+				
+				//	todo regex when this needs to get more complicated
+				//	try and avoid throwing to help debugging
+				if ( PropertyKey.length == 0 )
+					continue;
+				const KeyNumber = Number(PropertyKey[0]);
+				const KeyStartsWithNumber = !isNaN(KeyNumber);
+				if ( KeyStartsWithNumber )
+					continue;
+					
+				try
+				{
+					Element.setAttribute(PropertyKey,PropertyValue);
+				}
+				catch{};
 			}
 		}
+		
+		//	set css variable
+		Element.Value = Value;
+		Element.style.setProperty(`--Indent`,Indent);
+		Element.style.setProperty(`--Key`,Key);
+		Element.style.setProperty(`--Value`,Value);
+		Element.Droppable = Meta.Droppable;
+		
+		if ( Meta.Draggable )
+			Element.setAttribute('Draggable',true);
+		if ( Meta.Droppable )
+			Element.setAttribute('Droppable',true);
+		if ( Meta.Selected )
+			Element.setAttribute('Selected',true);
+		else
+			Element.removeAttribute('Selected');
+			
+		
+		//	toggle collapsable
+		//	attribute only exists on collapsable objects
+		if ( ValueIsChild )
+		{
+			Element.setAttribute('Collapsed',Meta.Collapsed==true);
+		}
+		
 		
 		
 		let Label = Key;
@@ -397,16 +433,55 @@ export default class TreeViewElement extends HTMLElement
 			const ChildCount = ValueKeys.length;
 			Label += ` x${ChildCount}`;
 		}
-		let LabelElement = document.createElement('label');
-		LabelElement.innerText = Label;
-		Element.appendChild(LabelElement);	
-		
-		if ( !ValueIsChild )
-		{
-			let ValueElement = document.createElement('span');
+		let LabelElement = Array.from(Element.children).find( e => e.nodeName == 'LABEL' );
+		if ( LabelElement )
+			LabelElement.innerText = Label;
+
+		let ValueElement = Array.from(Element.children).find( e => e.nodeName == 'SPAN' );
+		if ( ValueElement )
 			ValueElement.innerText = Value;
-			Element.appendChild(ValueElement);	
+		
+	}
+	
+	GetAddressKey(Address)
+	{
+		const AddressKey = Address.join(AddressDelin);
+		return AddressKey;
+	}
+	
+	SetNodeMeta(Address,Property,Value)
+	{
+		const Meta = this.GetNodeMeta(Address);
+		//	todo? reduce to non-default values only for legibility
+		Meta[Property] = Value;
+		const TreeMeta = this.meta;
+		const AddressKey = this.GetAddressKey(Address);
+		TreeMeta[AddressKey] = Meta;
+		this.meta = TreeMeta;
+	}
+	
+	GetNodeMeta(Address)
+	{
+		function GetDefaultNodeMeta()
+		{
+			const Meta = {};
+			Meta.Collapsed = false;
+			Meta.Visible = true;
+			Meta.Draggable = false;
+			Meta.Droppable = false;
+			Meta.Selected = false;
+			return Meta;
 		}
+		
+		const TreeMeta = this.meta;
+		const Meta = GetDefaultNodeMeta();
+		const AddressKey = this.GetAddressKey(Address);
+		if ( TreeMeta.hasOwnProperty(AddressKey) )
+		{
+			const NodeMeta = TreeMeta[AddressKey];
+			Object.assign( Meta, NodeMeta );
+		}
+		return Meta;
 	}
 
 	UpdateTreeElements()
@@ -420,6 +495,7 @@ export default class TreeViewElement extends HTMLElement
 		//const TreeNodeElementType = TreeNodeElement.ElementName();
 		const TreeNodeElementType = 'div';
 		
+		/*
 		//	todo: give every item an address;
 		//	[key,key,key,key] so we can identify nodes & elements
 		//	all elements for now
@@ -428,6 +504,7 @@ export default class TreeViewElement extends HTMLElement
 			const LastIndex = this.TreeChildren.length-1;
 			this.TreeContainer.removeChild( this.TreeChildren[LastIndex] );
 		}
+		*/
 		
 		//	should we put this logic in tree-node and recurse automatically?...
 		//	may be harder to do edits
@@ -435,49 +512,43 @@ export default class TreeViewElement extends HTMLElement
 		
 		let SetupTreeNodeElement = this.SetupTreeNodeElement.bind(this);
 		
-		function GetDefaultNodeMeta()
-		{
-			const Meta = {};
-			Meta.Ignore = [];
-			return Meta;
-		}
-		function GetNodeMeta(NodeObject)
-		{
-			if ( !NodeObject )
-				NodeObject = {};
-			let Meta = GetDefaultNodeMeta();
-			Meta = Object.assign( Meta, NodeObject._TreeMeta );
-			Meta.Ignore.push('_TreeMeta');
-			return Meta;
-		}
 		
-		function RecursivelyAddObject(NodeObject,ParentNode,ParentElement,Address)
+		function RecursivelyUpdateObject(NodeObject,ParentNode,ParentElement,Address)
 		{
-			let NodeMeta = GetNodeMeta(NodeObject);
+			//let NodeMeta = this.GetNodeMeta(Address);
 				
 			for ( let [Key,Value] of Object.entries(NodeObject) )
 			{
-				//	ignore keys
-				if ( NodeMeta.Ignore.includes(Key) )
-					continue;
-				
 				const ChildAddress = [...Address,Key];
-				const ChildElement = document.createElement(TreeNodeElementType);
-				ParentElement.appendChild(ChildElement);
+				const ChildAddressKey = this.GetAddressKey(ChildAddress);
+				const ChildMeta = this.GetNodeMeta( ChildAddress );
+				let ChildElement = Array.from(ParentElement.children).find( e => e.AddressKey == ChildAddressKey );
 
-				const ChildIsObject = Value!==null && ( typeof Value == typeof {} );
-				
-				const ChildNodeMeta = GetNodeMeta(Value);
-				ChildNodeMeta.ValueIsChild = ChildIsObject;
-				SetupTreeNodeElement( ChildElement, ChildAddress, Value, ChildNodeMeta );
-				
-				if ( ChildNodeMeta.ValueIsChild )
+				if ( !ChildMeta.Visible )
 				{
-					RecursivelyAddObject( Value, NodeObject, ChildElement, ChildAddress );
+					if ( ChildElement )
+						ParentElement.removeChild(ChildElement);
+					continue;
+				}
+				
+				const ChildValueIsObject = Value!==null && ( typeof Value == typeof {} );
+
+				if ( !ChildElement )
+				{
+					ChildElement = document.createElement(TreeNodeElementType);
+					ParentElement.appendChild(ChildElement);
+					this.SetupNewTreeNodeElement( ChildElement, ChildAddress, Value, ChildMeta, ChildValueIsObject );
+				}
+
+				this.SetupTreeNodeElement( ChildElement, ChildAddress, Value, ChildMeta, ChildValueIsObject );
+				
+				if ( ChildValueIsObject )
+				{
+					RecursivelyUpdateObject.call( this, Value, NodeObject, ChildElement, ChildAddress );
 				}
 			}
 		}
-		RecursivelyAddObject( Json, {}, this.TreeContainer, [] );
+		RecursivelyUpdateObject.call( this, Json, {}, this.TreeContainer, [] );
 	}
 }
 

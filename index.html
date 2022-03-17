@@ -38,8 +38,29 @@ Test.Fish = 'Wet';
 Test.Circle = {};
 	Test.Circle.Position = [0,1,2,{}];
 	Test.Circle.Radius = 3;
-	
-TestTree.json = Test;
+
+async function OverwriteLoop()
+{
+	while(true)
+	{
+		TestTree.json = Test;
+		Test.Circle.Radius++;
+		let Yield = new Promise( (res) =>
+		{
+			setInterval(res,100);
+		}
+		);
+		await Yield;
+	}
+}
+OverwriteLoop();
+
+//	tree UI control
+const Meta = {};
+Meta.Circle = { Collapsed:true };
+Meta['Circle.Position'] = { Collapsed:true };
+Meta['Circle.Position.2'] = { Visible:false };
+TestTree.meta = Meta;
 
 </script>
 </body>
