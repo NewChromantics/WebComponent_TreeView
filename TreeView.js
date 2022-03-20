@@ -380,7 +380,7 @@ export default class TreeViewElement extends HTMLElement
 
 		if ( !ValueIsChild )
 		{
-			function OnValueChanged(InputElement,Value)
+			function OnValueChanged(InputElement,Value,IsFinalValue)
 			{
 				console.log(`Value of ${Element.AddressKey} changed to ${Value}`,InputElement);
 				const Json = this.json;
@@ -392,21 +392,59 @@ export default class TreeViewElement extends HTMLElement
 				Node[Leaf] = Value;
 				this.SetNewJson(Json);
 			}
-			let ValueElement = this.CreateValueElement( Meta.Writable, Value, OnValueChanged.bind(this) );
+			let ValueElement = this.CreateValueElement( Meta, Value, OnValueChanged.bind(this) );
 			Element.appendChild(ValueElement);	
 		}
 	}
 
-	CreateValueElement(Writable,Value,OnChanged)
+	CreateValueElement(Meta,Value,OnChanged)
 	{
-		if ( Writable )
+		if ( Meta.Writable )
 		{
-			if ( typeof Value == typeof true )
+			//	does the meta have a specific component type?
+			let ElementType = 'input';
+			let InputType = Meta.type;
+		
+			if ( !InputType )
 			{
-				let Element = document.createElement('input');
-				Element.type = 'checkbox';
-				Element.checked = Value;
-				Element.onchange = () => OnChanged(Element,Element.checked);
+				if ( typeof Value == typeof true )
+					InputType = 'checkbox';
+				if ( typeof Value == typeof '' )
+					InputType = 'text';
+				if ( typeof Value == typeof 0 )
+					InputType = 'number';	
+			}
+				
+			if ( ElementType )
+			{
+				let Element = document.createElement(ElementType);
+				Element.type = InputType;
+				
+				//	assign other meta, like min, max etc
+				for ( let [AttributeKey,AttributeValue] of Object.entries(Meta) )
+				{
+					Element[AttributeKey] = AttributeValue;
+				}
+
+				const ValueKey = 'value';
+				if ( Element.type == 'checkbox' )
+				{
+					Element.checked = Value;
+					Element.onchange = () => OnChanged(Element,Element.checked);
+				}
+				else
+				{
+					Element.value = Value;
+					function GetValue()
+					{
+						if ( !isNaN(Element.valueAsNumber) )
+							return Element.valueAsNumber;
+						else
+							return Element.value;
+					}
+					Element.oninput = () => OnChanged(Element,GetValue(),false);
+					Element.onchange = () => OnChanged(Element,GetValue());
+				}
 				return Element;
 			}
 		}
