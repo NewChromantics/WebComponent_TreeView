@@ -61,14 +61,7 @@ export default class TreeViewElement extends HTMLElement
 	{
 		super();
 		
-		this.onchange = function(NewJson,Change)
-		{
-			console.log(`TreeViewElement change; ${JSON.stringify(Change,null,'\t')}`);
-		};
-		this.onselectionchange = function(NewSelections)
-		{
-			console.log(`TreeViewElement now selected; ${NewSelections}`);
-		}
+		this.DomEvents = {};
 	}
 	
 	static ElementName()
@@ -135,7 +128,7 @@ export default class TreeViewElement extends HTMLElement
 	SetNewJson(Json,Change)
 	{
 		this.json = Json;
-		this.onchange(Json,Change);
+		this.CallDomEvent('change',[Json,Change]);
 	}
 	
 	get TreeContainer()	{	return this.RootElement;	}
@@ -228,7 +221,7 @@ export default class TreeViewElement extends HTMLElement
 		SelectedAddresses = SelectedAddresses.filter( a => a!=null );
 		SelectedAddresses.forEach( a => this.SetNodeMeta(a,'Selected',true) );
 		
-		this.onselectionchange(SelectedAddresses);
+		this.CallDomEvent('selectionchange',[SelectedAddresses]);
 	}
 	
 	SetupNewTreeNodeElement(Element,Address,Value,Meta,ValueIsChild)
@@ -350,15 +343,20 @@ export default class TreeViewElement extends HTMLElement
 		Element.addEventListener('dragover',OnDragOver);
 		Element.addEventListener('dragleave',OnDragLeave);
 		
-		Element.onclick = function(Event)
+		//	currently intefering with inputs
+		//	fix the event order/prevent default etc
+		if ( !Meta.Writable )
 		{
-			const AppendSelect = Event.shiftKey;
-			this.ToggleSelected( [Element],AppendSelect);
+			Element.onclick = function(Event)
+			{
+				const AppendSelect = Event.shiftKey;
+				this.ToggleSelected( [Element],AppendSelect);
 
-			Event.stopPropagation();
-			Event.preventDefault();
-		}.bind(this);
-		
+				Event.stopPropagation();
+				Event.preventDefault();
+			}.bind(this);
+		}
+			
 		if ( ValueIsChild )
 		{
 			let Collapser = document.createElement('button');
@@ -382,11 +380,83 @@ export default class TreeViewElement extends HTMLElement
 
 		if ( !ValueIsChild )
 		{
-			let ValueElement = document.createElement('span');
-			ValueElement.innerText = 'VALUE';
+			function OnValueChanged(InputElement,Value,IsFinalValue)
+			{
+				console.log(`Value of ${Element.AddressKey} changed to ${Value}`,InputElement);
+				const Json = this.json;
+				let Node = Json;
+				const Addresses = Element.Address.slice();
+				const Leaf = Addresses.pop();
+				for ( let a of Addresses )
+					Node = Node[a];
+				Node[Leaf] = Value;
+				this.SetNewJson(Json);
+			}
+			let ValueElement = this.CreateValueElement( Meta, Value, OnValueChanged.bind(this) );
 			Element.appendChild(ValueElement);	
 		}
 	}
+
+	CreateValueElement(Meta,Value,OnChanged)
+	{
+		if ( Meta.Writable )
+		{
+			//	does the meta have a specific component type?
+			let ElementType = 'input';
+			let InputType = Meta.type;
+		
+			if ( !InputType )
+			{
+				if ( typeof Value == typeof true )
+					InputType = 'checkbox';
+				if ( typeof Value == typeof '' )
+					InputType = 'text';
+				if ( typeof Value == typeof 0 )
+					InputType = 'number';	
+			}
+				
+			if ( ElementType )
+			{
+				let Element = document.createElement(ElementType);
+				Element.type = InputType;
+				
+				//	assign other meta, like min, max etc
+				for ( let [AttributeKey,AttributeValue] of Object.entries(Meta) )
+				{
+					Element[AttributeKey] = AttributeValue;
+				}
+
+				const ValueKey = 'value';
+				if ( Element.type == 'checkbox' )
+				{
+					Element.checked = Value;
+					Element.onchange = () => OnChanged(Element,Element.checked);
+				}
+				else
+				{
+					Element.value = Value;
+					function GetValue()
+					{
+						if ( !isNaN(Element.valueAsNumber) )
+							return Element.valueAsNumber;
+						else
+							return Element.value;
+					}
+					Element.oninput = () => OnChanged(Element,GetValue(),false);
+					Element.onchange = () => OnChanged(Element,GetValue());
+				}
+				return Element;
+			}
+		}
+
+		//	fallback if this type wasnt handled as well as for readonly
+		{
+			let Element = document.createElement('span');
+			Element.innerText = `${Value}`;//'VALUE';
+			return Element;
+		}
+	}
+
 	
 	SetupTreeNodeElement(Element,Address,Value,Meta,ValueIsChild)
 	{
@@ -428,6 +498,10 @@ export default class TreeViewElement extends HTMLElement
 			let ValueElement = Array.from(Element.children).find( e => e.nodeName == 'SPAN' );
 			if ( ValueElement )
 				ValueElement.innerText = Value;
+
+			let InputValueElement = Array.from(Element.children).find( e => e.nodeName == 'INPUT' );
+			if ( InputValueElement )
+				InputValueElement.value = Value;
 		}
 		
 		
@@ -483,6 +557,7 @@ export default class TreeViewElement extends HTMLElement
 			Meta.Draggable = false;
 			Meta.Droppable = false;
 			Meta.Selected = false;
+			Meta.Writable = false;
 			return Meta;
 		}
 		
@@ -560,6 +635,38 @@ export default class TreeViewElement extends HTMLElement
 			}
 		}
 		RecursivelyUpdateObject.call( this, Json, {}, this.TreeContainer, [] );
+	}
+	
+	CallDomEvent(DomEventName,Arguments)
+	{
+		//	cache ondataevent attribute into a functor
+		if ( !this.DomEvents[DomEventName] && this.hasAttribute(`on${DomEventName}`) )
+		{
+			const EventFunctionString = this.getAttribute(`on${DomEventName}`);
+			this.DomEvents[DomEventName] = window.Function(EventFunctionString);
+		}
+
+		//if ( !this.DomEvents[DomEventName] && this.hasOwnProperty(`on${DomEventName}`) )
+		if ( !this.DomEvents[DomEventName] && this[`on${DomEventName}`] )
+		{
+			this.DomEvents[DomEventName] = this[`on${DomEventName}`];
+		}
+
+		//	todo: dispatch event for addListener support
+		//this.dispatchEvent( new CustomEvent(DomEventName) )
+
+		const Event = this.DomEvents[DomEventName];
+		if ( Event )
+		{
+			try
+			{
+				Event(...Arguments);
+			}
+			catch(e)
+			{
+				console.error(`on${DomEventName} exception; ${e}`);
+			}
+		}
 	}
 }
 

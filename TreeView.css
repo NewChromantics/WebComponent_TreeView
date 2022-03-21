@@ -2,6 +2,8 @@ label
 {
 	font-weight:	bold;
 	margin-right:	1em;
+	min-width:		7em;
+	display:		inline-block;
 }
 
 
