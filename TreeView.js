@@ -544,6 +544,20 @@ export default class TreeViewElement extends HTMLElement
 					RecursivelyUpdateObject.call( this, Value, NodeObject, ChildElement, ChildAddress );
 				}
 			}
+			
+			//	remove children no longer present
+			{
+				const ChildKeys = Object.keys(NodeObject);
+				let ChildElements = Array.from(ParentElement.children);
+				ChildElements = ChildElements.filter( e => e.Address!=null );	//	filter out labels, collapsers etc, we only want node elements
+				function ElementHasNode(Element)
+				{
+					return ChildKeys.includes(Element.Key);
+				}
+				const Missing = ChildElements.filter( e => !ElementHasNode(e) );
+				if ( Missing.length )
+					Missing.forEach( e => ParentElement.removeChild(e) );
+			}
 		}
 		RecursivelyUpdateObject.call( this, Json, {}, this.TreeContainer, [] );
 	}

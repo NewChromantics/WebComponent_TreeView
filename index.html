@@ -41,15 +41,23 @@ Test.Circle = {};
 
 async function OverwriteLoop()
 {
+	let Counter = 0;
 	while(true)
 	{
 		TestTree.json = Test;
+
 		Test.Circle.Radius++;
 		let Yield = new Promise( (res) =>
 		{
 			setInterval(res,100);
 		}
 		);
+		
+		Test.TransitiveItems = {};
+		for ( let i=Math.max(0,Counter-5);	i<=Counter;	i++ )
+			Test.TransitiveItems[i] = `Hello${i}`;
+		Counter++;
+		
 		await Yield;
 	}
 }
