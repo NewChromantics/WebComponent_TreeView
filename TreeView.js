@@ -54,6 +54,46 @@ function SetAttributeTrueOrRemove(Element,Attribute,Boolean,Value)
 	}
 }
 
+function IsTypedArray(obj)
+{
+	return !!obj && obj.byteLength !== undefined;
+	//	gr: does this work outside of chromium? (jsc, chakra etc)
+	const TypedArrayType = Object.getPrototypeOf(Uint8Array);
+	return obj instanceof TypedArrayType;
+}
+
+//	should this value expand to another node in the tree?
+function IsValueNodeChild(Value)
+{
+	//	null is an object, so check for it
+	if ( !Value )
+		return false; 
+	
+	//	not an object
+	if ( typeof Value != typeof {} )
+		return false;
+	
+	if ( Value.length && Value.length > 100 )
+		return false;
+	
+	//	we allow arrays, maybe we should threshold a sensible array size?
+	//	but we dont allow typed arrays
+	if ( IsTypedArray(Value) )
+		return false;
+		
+	return true;
+}
+
+function ValueAsText(Value)
+{
+	if ( IsTypedArray(Value) )
+	{
+		const TypeName = Value.constructor.name;
+		const Size = Value.length;
+		return `${TypeName} x${Size}`;
+	}
+	return `${Value}`;
+}
 
 export default class TreeViewElement extends HTMLElement 
 {
@@ -452,7 +492,7 @@ export default class TreeViewElement extends HTMLElement
 		//	fallback if this type wasnt handled as well as for readonly
 		{
 			let Element = document.createElement('span');
-			Element.innerText = `${Value}`;//'VALUE';
+			Element.innerText = 'VALUE';
 			return Element;
 		}
 	}
@@ -497,7 +537,7 @@ export default class TreeViewElement extends HTMLElement
 
 			let ValueElement = Array.from(Element.children).find( e => e.nodeName == 'SPAN' );
 			if ( ValueElement )
-				ValueElement.innerText = Value;
+				ValueElement.innerText = ValueAsText(Value);
 
 			let InputValueElement = Array.from(Element.children).find( e => e.nodeName == 'INPUT' );
 			if ( InputValueElement )
@@ -603,7 +643,7 @@ export default class TreeViewElement extends HTMLElement
 					continue;
 				}
 				
-				const ChildValueIsObject = Value!==null && ( typeof Value == typeof {} );
+				const ChildValueIsObject = IsValueNodeChild(Value);
 
 				if ( !ChildElement )
 				{
