@@ -119,8 +119,42 @@ export default class TreeViewElement extends HTMLElement
 	}
 	
 	//	get json attribute as object
-	get json()		{	return AsObjectSafe( this.getAttribute('json') );	}
-	set json(Value)	{	this.setAttribute('json', JsonToString(Value) );	}
+	get json()		
+	{
+		//	we save json object as a cache, not really for performance, but because
+		//	object with say, large typed arrays, turns into a huge huge string
+		//	so keep it as an object as much as possible (warning: this means it's a reference that we can't safely modify!)
+		if ( this.JsonCache )
+			return this.JsonCache;
+		return AsObjectSafe( this.getAttribute('json') );	
+	}
+	set json(Value)	
+	{
+		if ( typeof Value == typeof {} )
+		{
+			this.JsonCache = Value;
+			//	note that we're not using the attribute, but also to trigger attribute change
+			this.setAttribute('json','this.JsonCache');
+			return;
+		}
+		this.setAttribute('json', JsonToString(Value) );	
+	}
+	
+	//	if we're using jsoncache, we don't want to modify it directly
+	//	this returns a deep copy (as much as possible) of the input json
+	//	this will go wrong when it comes to typed members...
+	//	can we detect this?
+	get mutablejson()
+	{
+		//	json is just a string
+		if ( !this.JsonCache )
+			return this.json;
+		
+		//	need something better than this
+		const Copy = JSON.parse( JSON.stringify(this.json) );
+		return Copy;
+	}
+
 	get meta()		{	return AsObjectSafe( this.getAttribute('meta') );	}
 	set meta(Value)	{	this.setAttribute('meta', JsonToString(Value) );	}
 	
@@ -185,7 +219,7 @@ export default class TreeViewElement extends HTMLElement
 		if ( OldAddress.every( (v,i) => NewAddress[i]==v ) )
 			throw `Detected drop on self`;
 			
-		const Json = this.json;
+		const Json = this.mutablejson;
 		console.log(`Moving ${OldAddress} to ${NewAddress}`);
 
 		//	find the old parent, and the key of the parent (and the data we're moving)
@@ -423,7 +457,7 @@ export default class TreeViewElement extends HTMLElement
 			function OnValueChanged(InputElement,Value,IsFinalValue)
 			{
 				console.log(`Value of ${Element.AddressKey} changed to ${Value}`,InputElement);
-				const Json = this.json;
+				const Json = this.mutablejson;
 				let Node = Json;
 				const Addresses = Element.Address.slice();
 				const Leaf = Addresses.pop();
