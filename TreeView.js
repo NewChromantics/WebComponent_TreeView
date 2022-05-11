@@ -130,8 +130,14 @@ function CreateWritableValueElement(Meta,InitialValue,OnChanged)
 		if ( typeof Value == typeof true )
 			InputType = 'checkbox';
 			
-		if ( typeof Value == typeof 0 )
-			InputType = 'number';	
+		if ( typeof Value == typeof 123 )
+		{
+			//	if the user has provided a min & max, default to a slider
+			if ( Meta.hasOwnProperty('min') && Meta.hasOwnProperty('max') )
+				InputType = 'range';
+			else
+				InputType = 'number';
+		}
 
 		if ( typeof Value == typeof '' )
 		{
