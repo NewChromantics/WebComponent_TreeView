@@ -573,7 +573,7 @@ export default class TreeViewElement extends HTMLElement
 			function OnValueChanged(InputElement,IsFinalValue=true)
 			{
 				const Value = InputElement.GetValue();
-				console.log(`Value of ${Element.AddressKey} changed to ${Value}`,InputElement);
+				//console.log(`Value of ${Element.AddressKey} changed to ${Value}`,InputElement);
 				const Json = this.mutablejson;
 				let Node = Json;
 				const Addresses = Element.Address.slice();
