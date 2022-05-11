@@ -102,8 +102,23 @@ function UseTextAreaForString(Value)
 		Value.length > 50 );
 }		
 
+function HandleTabKeyInTextArea(OnKeyDownEvent)
+{
+	const e = OnKeyDownEvent;
+	//if ( e.which != 9 ) return;
+	if ( e.key != 'Tab' )	return;
+
+	const Start = this.selectionStart;
+	const End = this.selectionEnd;
+	this.value = this.value.substr( 0, Start ) + '\t' + this.value.substr( End );
+	this.selectionStart = this.selectionEnd = Start + 1;
+	e.preventDefault();
+	return false;
+}
+
 function CreateWritableValueElement(Meta,InitialValue,OnChanged)
 {
+	const Value = InitialValue;
 	//	does the meta have a specific component type?
 	let ElementType = 'input';
 	let InputType = Meta.type;
@@ -125,7 +140,10 @@ function CreateWritableValueElement(Meta,InitialValue,OnChanged)
 			{
 				ElementType = 'textarea';
 				InputType = null;
+				
+				//	default textarea size
 				Meta.rows = Meta.rows || 10;
+				Meta.onkeydown = HandleTabKeyInTextArea;
 			}
 			else
 				InputType = 'text';
