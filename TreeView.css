@@ -6,7 +6,17 @@ label
 	display:		inline-block;
 }
 
+/* specific styling for value editors */
+textarea
+{
+	/* dont wrap texture areas */
+	white-space:	nowrap;  
+	overflow:		auto;
+	width:			100%;
+}
 
+
+/* every leaf/node element is a div */ 
 div
 {
 	--Indent:		0;
