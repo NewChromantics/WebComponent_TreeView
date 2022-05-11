@@ -102,6 +102,97 @@ function UseTextAreaForString(Value)
 		Value.length > 50 );
 }		
 
+function CreateWritableValueElement(Meta,InitialValue,OnChanged)
+{
+	//	does the meta have a specific component type?
+	let ElementType = 'input';
+	let InputType = Meta.type;
+	let SetValue;
+	let GetValue;
+
+	if ( !InputType )
+	{
+		if ( typeof Value == typeof true )
+			InputType = 'checkbox';
+			
+		if ( typeof Value == typeof 0 )
+			InputType = 'number';	
+
+		if ( typeof Value == typeof '' )
+		{
+			//	use a textarea if the string is long/has line feeds
+			if ( UseTextAreaForString(Value) )
+			{
+				ElementType = 'textarea';
+				InputType = null;
+				Meta.rows = Meta.rows || 10;
+			}
+			else
+				InputType = 'text';
+		}
+	}
+		
+	if ( !ElementType )
+		return;
+
+	let Element = document.createElement(ElementType);
+	//	this will error accessing only a getter for textareas
+	if ( InputType )
+		Element.type = InputType;
+	
+	//	assign other meta, like min, max etc
+	for ( let [AttributeKey,AttributeValue] of Object.entries(Meta) )
+	{
+		Element[AttributeKey] = AttributeValue;
+	}
+
+	const ValueKey = 'value';
+	if ( Element.type == 'checkbox' )
+	{
+		SetValue = function(NewValue)
+		{
+			Element.checked = NewValue;
+		}
+		GetValue = function()
+		{
+			return Element.checked;
+		}
+		
+		SetValue( Value );
+		Element.onchange = () => OnChanged(Element);
+	}
+	else
+	{
+		SetValue = function(NewValue)
+		{
+			Element.value = NewValue;
+		}
+		GetValue = function()
+		{
+			if ( !isNaN(Element.valueAsNumber) )
+				return Element.valueAsNumber;
+			else
+				return Element.value;
+		}
+		SetValue( Value );
+		Element.oninput = () => OnChanged(Element,false);
+		Element.onchange = () => OnChanged(Element);
+	}
+	
+	//	should call SetValue() here, but don't want to invoke onchange for initialisation 
+	Element.SetValue = SetValue;
+	Element.GetValue = GetValue;
+	
+	return Element;
+}
+
+
+
+
+
+
+
+
 export default class TreeViewElement extends HTMLElement 
 {
 	constructor()
@@ -487,86 +578,9 @@ export default class TreeViewElement extends HTMLElement
 	{
 		if ( Meta.Writable )
 		{
-			//	does the meta have a specific component type?
-			let ElementType = 'input';
-			let InputType = Meta.type;
-			let SetValue;
-			let GetValue;
-		
-			if ( !InputType )
-			{
-				if ( typeof Value == typeof true )
-					InputType = 'checkbox';
-					
-				if ( typeof Value == typeof 0 )
-					InputType = 'number';	
-
-				if ( typeof Value == typeof '' )
-				{
-					//	use a textarea if the string is long/has line feeds
-					if ( UseTextAreaForString(Value) )
-					{
-						ElementType = 'textarea';
-						InputType = null;
-						Meta.rows = Meta.rows || 10;
-					}
-					else
-						InputType = 'text';
-				}
-			}
-				
-			if ( ElementType )
-			{
-				let Element = document.createElement(ElementType);
-				//	this will error accessing only a getter for textareas
-				if ( InputType )
-					Element.type = InputType;
-				
-				//	assign other meta, like min, max etc
-				for ( let [AttributeKey,AttributeValue] of Object.entries(Meta) )
-				{
-					Element[AttributeKey] = AttributeValue;
-				}
-
-				const ValueKey = 'value';
-				if ( Element.type == 'checkbox' )
-				{
-					SetValue = function(NewValue)
-					{
-						Element.checked = NewValue;
-					}
-					GetValue = function()
-					{
-						return Element.checked;
-					}
-					
-					SetValue( Value );
-					Element.onchange = () => OnChanged(Element);
-				}
-				else
-				{
-					SetValue = function(NewValue)
-					{
-						Element.value = NewValue;
-					}
-					GetValue = function()
-					{
-						if ( !isNaN(Element.valueAsNumber) )
-							return Element.valueAsNumber;
-						else
-							return Element.value;
-					}
-					SetValue( Value );
-					Element.oninput = () => OnChanged(Element,false);
-					Element.onchange = () => OnChanged(Element);
-				}
-				
-				//	should call SetValue() here, but don't want to invoke onchange for initialisation 
-				Element.SetValue = SetValue;
-				Element.GetValue = GetValue;
-				
+			const Element = CreateWritableValueElement( Meta, Value, OnChanged );
+			if ( Element )
 				return Element;
-			}
 		}
 
 		//	fallback if this type wasnt handled as well as for readonly
