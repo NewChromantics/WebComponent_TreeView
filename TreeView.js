@@ -95,6 +95,13 @@ function ValueAsText(Value)
 	return `${Value}`;
 }
 
+function UseTextAreaForString(Value)
+{
+	return ( Value.includes('\t') ||
+		Value.includes('\n') ||
+		Value.length > 50 );
+}		
+
 export default class TreeViewElement extends HTMLElement 
 {
 	constructor()
@@ -454,8 +461,9 @@ export default class TreeViewElement extends HTMLElement
 
 		if ( !ValueIsChild )
 		{
-			function OnValueChanged(InputElement,Value,IsFinalValue)
+			function OnValueChanged(InputElement,IsFinalValue=true)
 			{
+				const Value = InputElement.GetValue();
 				console.log(`Value of ${Element.AddressKey} changed to ${Value}`,InputElement);
 				const Json = this.mutablejson;
 				let Node = Json;
@@ -468,6 +476,10 @@ export default class TreeViewElement extends HTMLElement
 			}
 			let ValueElement = this.CreateValueElement( Meta, Value, OnValueChanged.bind(this) );
 			Element.appendChild(ValueElement);	
+			
+			//	bit hacky, maybe should explicitly make a .LabelElement and .ValueElement
+			Element.SetValue = ValueElement.SetValue;
+			Element.GetValue = ValueElement.GetValue;
 		}
 	}
 
@@ -478,21 +490,37 @@ export default class TreeViewElement extends HTMLElement
 			//	does the meta have a specific component type?
 			let ElementType = 'input';
 			let InputType = Meta.type;
+			let SetValue;
+			let GetValue;
 		
 			if ( !InputType )
 			{
 				if ( typeof Value == typeof true )
 					InputType = 'checkbox';
-				if ( typeof Value == typeof '' )
-					InputType = 'text';
+					
 				if ( typeof Value == typeof 0 )
 					InputType = 'number';	
+
+				if ( typeof Value == typeof '' )
+				{
+					//	use a textarea if the string is long/has line feeds
+					if ( UseTextAreaForString(Value) )
+					{
+						ElementType = 'textarea';
+						InputType = null;
+						Meta.rows = Meta.rows || 10;
+					}
+					else
+						InputType = 'text';
+				}
 			}
 				
 			if ( ElementType )
 			{
 				let Element = document.createElement(ElementType);
-				Element.type = InputType;
+				//	this will error accessing only a getter for textareas
+				if ( InputType )
+					Element.type = InputType;
 				
 				//	assign other meta, like min, max etc
 				for ( let [AttributeKey,AttributeValue] of Object.entries(Meta) )
@@ -503,22 +531,40 @@ export default class TreeViewElement extends HTMLElement
 				const ValueKey = 'value';
 				if ( Element.type == 'checkbox' )
 				{
-					Element.checked = Value;
-					Element.onchange = () => OnChanged(Element,Element.checked);
+					SetValue = function(NewValue)
+					{
+						Element.checked = NewValue;
+					}
+					GetValue = function()
+					{
+						return Element.checked;
+					}
+					
+					SetValue( Value );
+					Element.onchange = () => OnChanged(Element);
 				}
 				else
 				{
-					Element.value = Value;
-					function GetValue()
+					SetValue = function(NewValue)
+					{
+						Element.value = NewValue;
+					}
+					GetValue = function()
 					{
 						if ( !isNaN(Element.valueAsNumber) )
 							return Element.valueAsNumber;
 						else
 							return Element.value;
 					}
-					Element.oninput = () => OnChanged(Element,GetValue(),false);
-					Element.onchange = () => OnChanged(Element,GetValue());
+					SetValue( Value );
+					Element.oninput = () => OnChanged(Element,false);
+					Element.onchange = () => OnChanged(Element);
 				}
+				
+				//	should call SetValue() here, but don't want to invoke onchange for initialisation 
+				Element.SetValue = SetValue;
+				Element.GetValue = GetValue;
+				
 				return Element;
 			}
 		}
@@ -526,7 +572,9 @@ export default class TreeViewElement extends HTMLElement
 		//	fallback if this type wasnt handled as well as for readonly
 		{
 			let Element = document.createElement('span');
-			Element.innerText = 'VALUE';
+			Element.SetValue = function(NewValue)	{	Element.innerText = ValueAsText(NewValue);	}
+			Element.GetValue = function()			{	throw `GetValue() on a non writable value`;	}
+			Element.SetValue(`VALUE`);
 			return Element;
 		}
 	}
@@ -564,18 +612,13 @@ export default class TreeViewElement extends HTMLElement
 		}
 		
 		//	Minimise changse
-		if ( Element.Value !== Value )
+		if ( Element.ValueCache !== Value )
 		{
-			Element.Value = Value;
+			Element.ValueCache = Value;
 			Element.style.setProperty(`--Value`,Value);
-
-			let ValueElement = Array.from(Element.children).find( e => e.nodeName == 'SPAN' );
-			if ( ValueElement )
-				ValueElement.innerText = ValueAsText(Value);
-
-			let InputValueElement = Array.from(Element.children).find( e => e.nodeName == 'INPUT' );
-			if ( InputValueElement )
-				InputValueElement.value = Value;
+			
+			//	gr: should this set the cache too?
+			Element.SetValue( Value );
 		}
 		
 		
