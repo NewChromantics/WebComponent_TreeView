@@ -381,46 +381,71 @@ export default class TreeViewElement extends HTMLElement
 		this.SetNewJson(Json,Change);
 	}
 	
-	ToggleSelected(Elements,KeepExisting)
+	ToggleSelected(ToggleElements,KeepExisting)
 	{
-		let SelectedElements = [];
-		function Traverse(Element)
+		//	get a list of selected elements
+		let WasSelectElements = [];
+		function FindSelectedRecursive(Element)
 		{
-			const ToggleThis = Elements.includes(Element);
 			let WasSelected = Element.hasAttribute('Selected');
-			if ( ToggleThis )
+			if ( WasSelected )
+				WasSelectElements.push(Element);
+			
+			for ( let Child of Element.children )
+				FindSelectedRecursive(Child);
+		}
+		const TreeChildren = this.TreeChildren;
+		TreeChildren.forEach( FindSelectedRecursive );
+		
+		
+		let UnselectElements = WasSelectElements;
+		let SelectElements = ToggleElements;
+		
+		//	if the first element in the list is already selected, we dont re-select
+		if ( ToggleElements.length )
+		{
+			const FirstElement = ToggleElements[0];
+			if ( WasSelectElements.includes(FirstElement) )
 			{
-				if ( !WasSelected )
+				if ( KeepExisting )
 				{
-					Element.setAttribute('Selected',true);
-					SelectedElements.push(Element);
+					UnselectElements = ToggleElements;
+					SelectElements = WasSelectElements;
+					KeepExisting = false;
 				}
 				else
 				{
-					Element.removeAttribute('Selected');
+					UnselectElements.push( ...ToggleElements );
+					SelectElements = [];
 				}
 			}
-			else if ( !KeepExisting )
+		}
+		
+		//	unselect
+		if ( !KeepExisting )
+		{
+			function Unselect(Element)
 			{
+				const Address = Element.Address;
+				this.SetNodeMeta(Address,'Selected',false);
 				Element.removeAttribute('Selected');
 			}
-			else if ( WasSelected )
-			{
-				SelectedElements.push(Element);
-			}
-			
-			for ( let Child of Element.children )
-			{
-				Traverse(Child);
-			}
+			UnselectElements.forEach( Unselect.bind(this) );
 		}
-
-		const TreeChildren = this.TreeChildren;
-		TreeChildren.forEach( Traverse );
 		
-		let SelectedAddresses = SelectedElements.map( e => e.Address );
-		SelectedAddresses = SelectedAddresses.filter( a => a!=null );
-		SelectedAddresses.forEach( a => this.SetNodeMeta(a,'Selected',true) );
+		//	select
+		const SelectedAddresses = [];
+		{
+			function Select(Element)
+			{
+				const Address = Element.Address;
+				this.SetNodeMeta(Address,'Selected',true);
+				SelectedAddresses.push( Address );
+				Element.setAttribute('Selected',true);
+			}
+			SelectElements.forEach( Select.bind(this) );
+		}
+		
 		
 		this.CallDomEvent('selectionchange',[SelectedAddresses]);
 	}
