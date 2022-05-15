@@ -327,12 +327,13 @@ export default class TreeViewElement extends HTMLElement
 		this.CallDomEvent('change',[Json,Change]);
 	}
 	
+	//	todo: [re]create root element with _root meta
 	get TreeContainer()	{	return this.RootElement;	}
 
 	get TreeChildren()
 	{
 		let Children = Array.from( this.TreeContainer.children );
-		Children = Children.filter( e => e instanceof TreeNodeElement || e instanceof HTMLDivElement );
+		Children = Children.filter( e => !(e instanceof HTMLStyleElement) );
 		return Children;
 	}
 	
@@ -655,8 +656,12 @@ export default class TreeViewElement extends HTMLElement
 			Element.ValueCache = Value;
 			Element.style.setProperty(`--Value`,Value);
 			
-			//	gr: should this set the cache too?
-			Element.SetValue( Value );
+			//	gr: a root/object node doesnt ahve a value (so doesn't have set value)
+			if ( Element.SetValue )
+			{
+				//	gr: should this set the cache too?
+				Element.SetValue( Value );
+			}
 		}
 		
 		
@@ -672,8 +677,10 @@ export default class TreeViewElement extends HTMLElement
 		}
 		let LabelElement = Array.from(Element.children).find( e => e.nodeName == 'LABEL' );
 		if ( LabelElement )
-			LabelElement.innerText = Label;
-		
+		{
+			if ( LabelElement.innerText != Label )
+				LabelElement.innerText = Label;
+		}
 		
 		//	update meta
 		Element.Droppable = Meta.Droppable;
@@ -713,11 +720,14 @@ export default class TreeViewElement extends HTMLElement
 			Meta.Droppable = false;
 			Meta.Selected = false;
 			Meta.Writable = false;
+			Meta.ElementType = 'div';
 			return Meta;
 		}
 		
 		const TreeMeta = this.meta;
 		const Meta = GetDefaultNodeMeta();
+		
+		//	special case
 		const AddressKey = this.GetAddressKey(Address);
 		if ( TreeMeta.hasOwnProperty(AddressKey) )
 		{
@@ -735,10 +745,8 @@ export default class TreeViewElement extends HTMLElement
 			
 		const Json = this.json;
 		const TreeChildren = this.TreeChildren;
-		//const TreeNodeElementType = TreeNodeElement.ElementName();
-		const TreeNodeElementType = 'div';
 		
-		//	should we put this logic in tree-node and recurse automatically?...
+		//	should we put this logic in tree-node element type and recurse automatically?...
 		//	may be harder to do edits
 		let Parent = this.TreeContainer;
 		
@@ -762,7 +770,7 @@ export default class TreeViewElement extends HTMLElement
 
 				if ( !ChildElement )
 				{
-					ChildElement = document.createElement(TreeNodeElementType);
+					ChildElement = document.createElement(ChildMeta.ElementType);
 					ParentElement.appendChild(ChildElement);
 					this.SetupNewTreeNodeElement( ChildElement, ChildAddress, Value, ChildMeta, ChildValueIsObject );
 				}
