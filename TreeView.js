@@ -341,7 +341,7 @@ export default class TreeViewElement extends HTMLElement
 		return Children;
 	}
 	
-	MoveData(OldAddress,NewAddress,AfterElement)
+	MoveData(OldAddress,NewAddress,BeforeKey=null)
 	{
 		if ( OldAddress.every( (v,i) => NewAddress[i]==v ) )
 			throw `Detected drop on self`;
@@ -356,12 +356,17 @@ export default class TreeViewElement extends HTMLElement
 		const OldLastKey = OldAddress[OldAddress.length-1];
 		let OldData = OldParent[OldLastKey];
 		
-		//	find the new parent
-		let NewParent = Json;
-		for ( let nk=0;	nk<NewAddress.length;	nk++ )
-			NewParent = NewParent[NewAddress[nk]];
-		//OldAddress.reduce( (Key,Obj) => Obj[Key], Json );
-
+		//	find the new parent (in a func, making NewParent const as we need to
+		//	edit it in-place)
+		function GetNewParent()
+		{
+			let NewParent = Json;
+			for ( let nk=0;	nk<NewAddress.length;	nk++ )
+				NewParent = NewParent[NewAddress[nk]];
+			return NewParent;
+		}
+		const NewParent = GetNewParent();
+		
 		//	detect if we're dropping onto the same depth as before
 		//	where we don't want a new key, as it's a replacement
 		//	todo: specific order
@@ -378,10 +383,35 @@ export default class TreeViewElement extends HTMLElement
 			if ( NewParent.hasOwnProperty(NewKey) )
 				throw `New parent already has a key ${NewKey}`;
 		}
+
+		//	in case we delete it, get the BeforeKey position now
+		const BeforePosition = Object.entries( NewParent ).findIndex( kv => kv[0] == BeforeKey );
+		
 		//	delete the old data from it's old parent
 		delete OldParent[OldLastKey];
-		//	put the new data, with the same old key, onto the new parent
-		NewParent[NewKey] = OldData;
+
+		//	put this key+data in a specific place
+		if ( BeforeKey )
+		{
+			let Entries = Object.entries( NewParent );
+			let InsertPosition = BeforePosition + 0;	//	+1 for after
+			const NewEntry = [NewKey,OldData];
+			Entries.splice( InsertPosition, 0, NewEntry );
+			
+			//	need to edit NewParent in-place, so clear the old
+			//	keys, then make a new object & assign
+			//	gr: maybe could re-set keys in correct order?
+			Object.keys( NewParent ).forEach( k => delete NewParent[k] );
+
+			//	need to use a Map to keep order correct
+			const NewParentObject = Object.fromEntries( new Map(Entries) );
+			Object.assign( NewParent, NewParentObject );
+		}
+		else
+		{
+			//	put the new data, with the same old key, onto the new parent
+			NewParent[NewKey] = OldData;
+		}
 			
 		const Change = {};
 		Change.Address = OldAddress;
@@ -487,7 +517,8 @@ export default class TreeViewElement extends HTMLElement
 				
 			const Drop = {};
 			Drop.Element = ParentElement;
-			Drop.AfterElement = Element;
+			//	todo: pick before or after depending on where the mouse is in the rect!
+			Drop.BeforeElement = Element;
 			return Drop;
 		}
 		
@@ -499,7 +530,8 @@ export default class TreeViewElement extends HTMLElement
 			
 			//	continuously called
 			//console.log(`OnDragOver ${Key}`);
-			Target.Element.setAttribute('DragOver',true);
+			const HighlightElement = Target.BeforeElement||Target.Element;
+			HighlightElement.setAttribute('DragOver',true);
 			Event.stopPropagation();
 			Event.preventDefault();	//	ios to accept drop
 			
@@ -520,14 +552,16 @@ export default class TreeViewElement extends HTMLElement
 			if ( !Target )
 				return;
 
-			Target.Element.removeAttribute('DragOver');
+			const HighlightElement = Target.BeforeElement||Target.Element;
+			HighlightElement.removeAttribute('DragOver');
 			Event.preventDefault();
 			Event.stopPropagation();	//	dont need to pass to parent
 	
 			//	move source object to dropped object
 			const OldAddress = JSON.parse(Event.dataTransfer.getData('text/plain'));
 			const NewAddress = Target.Element.Address;
-			this.MoveData(OldAddress,NewAddress,Target.AfterElement);
+			const BeforeKey = Target.BeforeElement ? Target.BeforeElement.Key : null;
+			this.MoveData(OldAddress,NewAddress,BeforeKey);
 		}
 		
 		function OnDragStart(Event)
