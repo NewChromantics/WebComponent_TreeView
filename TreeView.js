@@ -829,17 +829,39 @@ export default class TreeViewElement extends HTMLElement
 		
 		function RecursivelyUpdateObject(NodeObject,ParentNode,ParentElement,Address)
 		{
-			for ( let [Key,Value] of Object.entries(NodeObject) )
+			//	catch any out of order elements
+			let ElementsInOrder = true;
+			
+			const ChildNodes = Object.entries(NodeObject);
+			
+			function GetChildElements()
 			{
+				let Elements = Array.from(ParentElement.children);
+				//	filter out collapsable buttons, labels etc
+				Elements = Elements.filter( e => e.hasOwnProperty('AddressKey') );
+				return Elements;
+			}
+			
+			let ChildWithNoElementCount = 0;
+			for ( let ChildIndex in ChildNodes )
+			{
+				ChildIndex = Number(ChildIndex);
+				const [Key,Value] = ChildNodes[ChildIndex];
 				const ChildAddress = [...Address,Key];
 				const ChildAddressKey = this.GetAddressKey(ChildAddress);
 				const ChildMeta = this.GetNodeMeta( ChildAddress );
-				let ChildElement = Array.from(ParentElement.children).find( e => e.AddressKey == ChildAddressKey );
+				const ParentChildElements = GetChildElements();
+				let ChildElementIndex = ParentChildElements.findIndex( e => e.AddressKey == ChildAddressKey );
+				let ChildElement = ParentChildElements[ChildElementIndex];
+
+				if ( ChildElementIndex+ChildWithNoElementCount != ChildIndex )
+					ElementsInOrder = false;
 
 				if ( !ChildMeta.Visible )
 				{
 					if ( ChildElement )
 						ParentElement.removeChild(ChildElement);
+					ChildWithNoElementCount++;
 					continue;
 				}
 				
@@ -863,8 +885,7 @@ export default class TreeViewElement extends HTMLElement
 			//	remove children no longer present
 			{
 				const ChildKeys = Object.keys(NodeObject);
-				let ChildElements = Array.from(ParentElement.children);
-				ChildElements = ChildElements.filter( e => e.Address!=null );	//	filter out labels, collapsers etc, we only want node elements
+				const ChildElements = GetChildElements();
 				function ElementHasNode(Element)
 				{
 					return ChildKeys.includes(Element.Key);
@@ -872,6 +893,28 @@ export default class TreeViewElement extends HTMLElement
 				const Missing = ChildElements.filter( e => !ElementHasNode(e) );
 				if ( Missing.length )
 					Missing.forEach( e => ParentElement.removeChild(e) );
+			}
+			
+			//	elements are out of order
+			if ( !ElementsInOrder )
+			{
+				console.log(`re-ordering dom`);
+				//	re-append child elements from 0 to N
+				for ( let ChildIndex in ChildNodes )
+				{
+					const [Key,Value] = ChildNodes[ChildIndex];
+					const ChildAddress = [...Address,Key];
+					const ChildAddressKey = this.GetAddressKey(ChildAddress);
+					const ChildElements = GetChildElements();
+					let ChildElement = ChildElements.find( e => e.AddressKey == ChildAddressKey );
+					if ( ChildElement )
+						ParentElement.appendChild( ChildElement );
+					else
+					{
+						//	gr: this is okay if it's a non-visible element
+						//console.warn(`Element gone missing`);
+					}
+				}
 			}
 		}
 		RecursivelyUpdateObject.call( this, Json, {}, this.TreeContainer, [] );
