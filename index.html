@@ -5,8 +5,20 @@
 body
 {
 	display:	flex;
+	flex-direction: column;
+	gap:		1em;
 	margin:		0px;
 	background:	#3ac;
+}
+
+h2,p
+{
+	margin:		0em;
+	padding:	0.01em;
+}
+h2
+{
+	margin-top:	1em;
 }
 
 tree-view
@@ -29,7 +41,9 @@ tree-view
 </style>
 </head>
 <body>
-<tree-view id="TestTree" css="TreeView.css"></tree-view>
+<h2>Live-updating tree</h2>
+<p>This should have minimal DOM changes, and allow user to grab & select elements</p>
+<tree-view id="LiveTree" css="TreeView.css"></tree-view>
 <script type=module>
 
 let Test = {};
@@ -44,7 +58,7 @@ async function OverwriteLoop()
 	let Counter = 0;
 	while(true)
 	{
-		TestTree.json = Test;
+		LiveTree.json = Test;
 
 		Test.Circle.Radius++;
 		let Yield = new Promise( (res) =>
@@ -69,7 +83,33 @@ Meta.Circle = { Collapsed:true };
 Meta['Circle.Position'] = { Collapsed:true };
 Meta['Circle.Position.2'] = { Visible:false };
 Meta['Circle.Position.3.Hello'] = { Writable:true };
-TestTree.meta = Meta;
+LiveTree.meta = Meta;
+
+
+</script>
+
+
+<h2>Re-orderable tree</h2>
+<p>Should be able to drag & drop elements of this JSON to re-order keyed elements</p>
+<tree-view id="ReorderTree" css="TreeView.css"></tree-view>
+<textarea id="ReorderJson" rows=5></textarea>
+<script type=module>
+
+ReorderTree.onchange = (NewJson) => { ReorderJson.value = JSON.stringify(NewJson,null,'\t');	};
+const Tree = {};
+Tree.One = '11111';
+Tree.Two = '22222';
+Tree.Three = '33333';
+const Meta = {};
+Meta['_root'] = { Droppable:true };
+Object.keys(Tree).forEach( k => Meta[k] = { Draggable:true } );
+ReorderTree.meta = Meta;
+ReorderTree.json = Tree;
+ReorderTree.onchange( ReorderTree.json );
+
+</script>
+
+
 
 </script>
 </body>
