@@ -32,7 +32,7 @@ div
 
 div[DragOver]
 {
-	outline:	dashed red 1px;
+	outline:	dashed red 1px !important;
 }
 
 div[Collapsed]:hover
