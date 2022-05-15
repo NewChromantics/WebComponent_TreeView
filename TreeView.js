@@ -341,7 +341,7 @@ export default class TreeViewElement extends HTMLElement
 		return Children;
 	}
 	
-	MoveData(OldAddress,NewAddress)
+	MoveData(OldAddress,NewAddress,AfterElement)
 	{
 		if ( OldAddress.every( (v,i) => NewAddress[i]==v ) )
 			throw `Detected drop on self`;
@@ -362,18 +362,26 @@ export default class TreeViewElement extends HTMLElement
 			NewParent = NewParent[NewAddress[nk]];
 		//OldAddress.reduce( (Key,Obj) => Obj[Key], Json );
 
+		//	detect if we're dropping onto the same depth as before
+		//	where we don't want a new key, as it's a replacement
+		//	todo: specific order
+		const SameDepth = OldParent == NewParent;
+		
 		//	allow dropping onto something with the same key by adding a suffix to the key
 		let NewKey = OldLastKey;
-		while ( NewParent.hasOwnProperty(NewKey) )
+		if ( !SameDepth )
 		{
-			NewKey += '+';
+			while ( NewParent.hasOwnProperty(NewKey) )
+			{
+				NewKey += '+';
+			}
+			if ( NewParent.hasOwnProperty(NewKey) )
+				throw `New parent already has a key ${NewKey}`;
 		}
-		if ( NewParent.hasOwnProperty(NewKey) )
-			throw `New parent already has a key ${NewKey}`;
-		//	put the new data, with the same old key, onto the new parent
-		NewParent[NewKey] = OldData;
 		//	delete the old data from it's old parent
 		delete OldParent[OldLastKey];
+		//	put the new data, with the same old key, onto the new parent
+		NewParent[NewKey] = OldData;
 			
 		const Change = {};
 		Change.Address = OldAddress;
@@ -459,25 +467,39 @@ export default class TreeViewElement extends HTMLElement
 		Element.style.setProperty('webkitUserDrag','element');
 		Element.style.setProperty('webkitUserDrop','element');
 		
+		function GetDropTarget(Event)
+		{
+			if ( Element.Droppable )
+			{
+				const Drop = {};
+				Drop.Element = Element;
+				return Drop;
+			}
+				
+			//	if parent is droppable, use this element to
+			//	determine an order
+			if ( Element == this.RootElement )
+				return null;
+
+			const ParentElement = Element.parentNode;
+			if ( !ParentElement.Droppable )
+				return null;
+				
+			const Drop = {};
+			Drop.Element = ParentElement;
+			Drop.AfterElement = Element;
+			return Drop;
+		}
 		
 		function OnDragOver(Event)
 		{
-			let CanDrop = Element.Droppable;
-/*	dont have this data here!
-			//	dont allow drop on self
-			let OldAddress = Event.dataTransfer.getData('text/plain');
-			OldAddress = JSON.parse(OldAddress);
-			const NewAddress = Element.Address;
-			if ( OldAddress.all( (v,i) => NewAddress[i]==v ) )
-				CanDrop = false;
-			*/
-			//	let dragover propogate
-			if ( !CanDrop )
+			const Target = GetDropTarget.call(this,Event);
+			if ( !Target )
 				return;
 			
 			//	continuously called
 			//console.log(`OnDragOver ${Key}`);
-			Element.setAttribute('DragOver',true);
+			Target.Element.setAttribute('DragOver',true);
 			Event.stopPropagation();
 			Event.preventDefault();	//	ios to accept drop
 			
@@ -489,29 +511,23 @@ export default class TreeViewElement extends HTMLElement
 			//Event.dataTransfer.dropEffect = 'move';
 			//return true;
 		}
-		function OnDragLeave(Event)
-		{
-			const Key = Address[Address.length-1];
-			//console.log(`OnDragLeave ${Key}`);
-			Element.removeAttribute('DragOver');
-		}
 		function OnDrop(Event)
 		{
 			const Key = Address[Address.length-1];
 			console.log(`OnDrop ${Key}`,Element);
-			let CanDrop = Element.Droppable;
-			//	let dragover propogate
-			if ( !CanDrop )
+			
+			const Target = GetDropTarget.call(this,Event);
+			if ( !Target )
 				return;
-				
-			Element.removeAttribute('DragOver');
+
+			Target.Element.removeAttribute('DragOver');
 			Event.preventDefault();
 			Event.stopPropagation();	//	dont need to pass to parent
-			
+	
 			//	move source object to dropped object
 			const OldAddress = JSON.parse(Event.dataTransfer.getData('text/plain'));
-			const NewAddress = Element.Address;
-			this.MoveData(OldAddress,NewAddress);
+			const NewAddress = Target.Element.Address;
+			this.MoveData(OldAddress,NewAddress,Target.AfterElement);
 		}
 		
 		function OnDragStart(Event)
@@ -525,6 +541,13 @@ export default class TreeViewElement extends HTMLElement
 			Event.stopPropagation();	//	stops multiple objects being dragged
 			//Event.preventDefault();	//	this stops drag entirely
 			//return true;//	not required?
+		}
+		
+		function OnDragLeave(Event)
+		{
+			const Key = Address[Address.length-1];
+			//console.log(`OnDragLeave ${Key}`);
+			Element.removeAttribute('DragOver');
 		}
 		
 		function OnDragEnd(Event)
@@ -552,14 +575,14 @@ export default class TreeViewElement extends HTMLElement
 			return true;
 		}
 		
-		Element.addEventListener('dragstart',OnDragStart);
-		Element.addEventListener('dragenter',OnDragEnter);
-		Element.addEventListener('drag',OnDrag);	//	would be good to allow temporary effects
-		Element.addEventListener('dragend',OnDragEnd);
+		Element.addEventListener('dragstart',OnDragStart.bind(this));
+		Element.addEventListener('dragenter',OnDragEnter.bind(this));
+		Element.addEventListener('drag',OnDrag.bind(this));	//	would be good to allow temporary effects
+		Element.addEventListener('dragend',OnDragEnd.bind(this));
 
 		Element.addEventListener('drop',OnDrop.bind(this));
-		Element.addEventListener('dragover',OnDragOver);
-		Element.addEventListener('dragleave',OnDragLeave);
+		Element.addEventListener('dragover',OnDragOver.bind(this));
+		Element.addEventListener('dragleave',OnDragLeave.bind(this));
 		
 	}
 	
