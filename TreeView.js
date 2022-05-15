@@ -393,7 +393,7 @@ export default class TreeViewElement extends HTMLElement
 				NewParent = NewParent[NewAddress[nk]];
 			return NewParent;
 		}
-		const NewParent = GetNewParent();
+		const NewParent = NewAddress===false ? null : GetNewParent();
 		
 		//	detect if we're dropping onto the same depth as before
 		//	where we don't want a new key, as it's a replacement
@@ -402,7 +402,7 @@ export default class TreeViewElement extends HTMLElement
 		
 		//	allow dropping onto something with the same key by adding a suffix to the key
 		let NewKey = OldLastKey;
-		if ( !SameDepth )
+		if ( !SameDepth && NewParent )
 		{
 			while ( NewParent.hasOwnProperty(NewKey) )
 			{
@@ -413,13 +413,17 @@ export default class TreeViewElement extends HTMLElement
 		}
 
 		//	in case we delete it, get the BeforeKey position now
-		const BeforePosition = Object.entries( NewParent ).findIndex( kv => kv[0] == BeforeKey );
+		const BeforePosition = Object.entries( NewParent || {} ).findIndex( kv => kv[0] == BeforeKey );
 		
 		//	delete the old data from it's old parent
 		delete OldParent[OldLastKey];
 
+		if ( !NewParent )
+		{
+			//	data being deleted
+		}
 		//	put this key+data in a specific place
-		if ( BeforeKey )
+		else if ( BeforeKey )
 		{
 			let Entries = Object.entries( NewParent );
 			let InsertPosition = BeforePosition + 0;	//	+1 for after
@@ -685,6 +689,7 @@ export default class TreeViewElement extends HTMLElement
 		{
 			let Collapser = document.createElement('button');
 			Collapser.className = 'Collapser';
+			Collapser.value = 'Collapse';
 			Element.appendChild(Collapser);	
 			
 			Collapser.onclick = function(Event)
@@ -693,6 +698,20 @@ export default class TreeViewElement extends HTMLElement
 				Collapsed = !Collapsed;
 				Element.setAttribute('Collapsed',Collapsed);
 				this.SetNodeMeta(Element.Address,'Collapsed',Collapsed);		
+				Event.stopPropagation();
+			}.bind(this);
+		}
+		
+		if ( Meta.Deletable )
+		{
+			let Deleter = document.createElement('button');
+			Deleter.className = 'Deleter';
+			Deleter.value = 'Delete';
+			Element.appendChild(Deleter);	
+			
+			Deleter.onclick = function(Event)
+			{
+				this.MoveData( Element.Address, false );
 				Event.stopPropagation();
 			}.bind(this);
 		}
@@ -853,6 +872,7 @@ export default class TreeViewElement extends HTMLElement
 			Meta.Writable = false;
 			Meta.ElementType = 'div';
 			Meta.Selectable = true;
+			Meta.Deletable = false;
 			return Meta;
 		}
 		

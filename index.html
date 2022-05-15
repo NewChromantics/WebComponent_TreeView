@@ -92,17 +92,21 @@ LiveTree.meta = Meta;
 <h2>Re-orderable tree</h2>
 <p>Should be able to drag & drop elements of this JSON to re-order keyed elements</p>
 <tree-view id="ReorderTree" css="TreeView.css"></tree-view>
-<textarea id="ReorderJson" rows=5></textarea>
+<textarea id="ReorderJson" rows=10></textarea>
 <script type=module>
 
 ReorderTree.onchange = (NewJson) => { ReorderJson.value = JSON.stringify(NewJson,null,'\t');	};
 const Tree = {};
-Tree.One = '11111';
-Tree.Two = '22222';
-Tree.Three = '33333';
+Tree.One = '1111';
+Tree.Two = '2222';
+Tree.Three = '3333';
+Tree.Four = '4444';
+Tree.Five = '5555';
+Tree.Six = '6666';
 const Meta = {};
 Meta['_root'] = { Droppable:true };
-Object.keys(Tree).forEach( k => Meta[k] = { Draggable:true } );
+const NodeMeta = { Draggable:true, Deletable:true };
+Object.keys(Tree).forEach( k => Meta[k] = NodeMeta );
 ReorderTree.meta = Meta;
 ReorderTree.json = Tree;
 ReorderTree.onchange( ReorderTree.json );

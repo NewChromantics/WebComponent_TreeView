@@ -73,3 +73,17 @@ div[Collapsed=true] .Collapser:before
 {
 	content:	"\25B8";
 }
+
+
+.Deleter
+{
+	border:		none;
+	cursor:		pointer;
+}
+
+.Deleter:before
+{
+	xcontent:	"\2612";	/* 2327 2612 22a0 */
+	content:	"\274c";	/* 2327 2612 22a0 */
+	line-height:	1em;
+}
