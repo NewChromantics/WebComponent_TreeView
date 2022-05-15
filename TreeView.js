@@ -288,6 +288,10 @@ export default class TreeViewElement extends HTMLElement
 	{
 		this.RootElement = document.createElement('div');
 		this.RootElement.className = this.ElementName();
+		//this.SetupNewTreeNodeElement( this.RootElement, [], undefined, this.GetNodeMeta(null), true );
+		this.RootElement.Address = [];
+		this.SetupDraggableTreeNodeElement( this.RootElement);
+		
 		
 		this.Style = document.createElement('style');
 		
@@ -421,21 +425,10 @@ export default class TreeViewElement extends HTMLElement
 		this.CallDomEvent('selectionchange',[SelectedAddresses]);
 	}
 	
-	SetupNewTreeNodeElement(Element,Address,Value,Meta,ValueIsChild)
+	SetupDraggableTreeNodeElement(Element)
 	{
-		const Key = Address[Address.length-1];
-		const Indent = Address.length-1;
-
-		Element.Address = Address;
-		Element.AddressKey = this.GetAddressKey(Address);
-
-		Element.style.setProperty(`--Indent`,Indent);
-		Element.Key = Key;
-		Element.style.setProperty(`--Key`,Key);
-		
-		//	minimise changes by setting initial values
-		
-
+		const Address = Element.Address;
+			
 		//	on ios its a css choice
 		//	gr: not required https://stackoverflow.com/questions/6600950/native-html5-drag-and-drop-in-mobile-safari-ipad-ipod-iphone
 		Element.style.setProperty('webkitUserDrag','element');
@@ -473,11 +466,13 @@ export default class TreeViewElement extends HTMLElement
 		}
 		function OnDragLeave(Event)
 		{
+			const Key = Address[Address.length-1];
 			//console.log(`OnDragLeave ${Key}`);
 			Element.removeAttribute('DragOver');
 		}
 		function OnDrop(Event)
 		{
+			const Key = Address[Address.length-1];
 			console.log(`OnDrop ${Key}`,Element);
 			let CanDrop = Element.Droppable;
 			//	let dragover propogate
@@ -496,6 +491,7 @@ export default class TreeViewElement extends HTMLElement
 		
 		function OnDragStart(Event)
 		{
+			const Key = Address[Address.length-1];
 			//console.log(`OnDragStart ${Key}`);
 			//Event.dataTransfer.effectAllowed = 'all';
 			Event.dataTransfer.dropEffect = 'link';	//	copy move link none
@@ -540,21 +536,42 @@ export default class TreeViewElement extends HTMLElement
 		Element.addEventListener('dragover',OnDragOver);
 		Element.addEventListener('dragleave',OnDragLeave);
 		
+	}
+	
+	SetupNewTreeNodeElement(Element,Address,Value,Meta,ValueIsChild)
+	{
+		const IsRoot = Address.length == 0;
+		const Key = Address[Address.length-1];
+		const Indent = Address.length-1;
+
+		Element.Address = Address;
+		Element.AddressKey = this.GetAddressKey(Address);
+
+		Element.style.setProperty(`--Indent`,Indent);
+		Element.Key = Key;
+		Element.style.setProperty(`--Key`,Key);
+		
+		
+		this.SetupDraggableTreeNodeElement( Element );
+
 		//	currently intefering with inputs
 		//	fix the event order/prevent default etc
 		if ( !Meta.Writable )
 		{
-			Element.onclick = function(Event)
+			if ( Meta.Selectable )
 			{
-				const AppendSelect = Event.shiftKey;
-				this.ToggleSelected( [Element],AppendSelect);
+				Element.onclick = function(Event)
+				{
+					const AppendSelect = Event.shiftKey;
+					this.ToggleSelected( [Element], AppendSelect );
 
-				Event.stopPropagation();
-				Event.preventDefault();
-			}.bind(this);
+					Event.stopPropagation();
+					Event.preventDefault();
+				}.bind(this);
+			}
 		}
 			
-		if ( ValueIsChild )
+		if ( ValueIsChild && !IsRoot )
 		{
 			let Collapser = document.createElement('button');
 			Collapser.className = 'Collapser';
@@ -711,6 +728,10 @@ export default class TreeViewElement extends HTMLElement
 	
 	GetNodeMeta(Address)
 	{
+		//	root address
+		if ( Address === null )
+			Address = ['_root'];
+		
 		function GetDefaultNodeMeta()
 		{
 			const Meta = {};
@@ -721,6 +742,7 @@ export default class TreeViewElement extends HTMLElement
 			Meta.Selected = false;
 			Meta.Writable = false;
 			Meta.ElementType = 'div';
+			Meta.Selectable = true;
 			return Meta;
 		}
 		
@@ -749,6 +771,13 @@ export default class TreeViewElement extends HTMLElement
 		//	should we put this logic in tree-node element type and recurse automatically?...
 		//	may be harder to do edits
 		let Parent = this.TreeContainer;
+
+		//	update meta of root
+		{
+			const RootMeta = this.GetNodeMeta(['_root']);
+			this.SetupTreeNodeElement( Parent, '_root', {}, RootMeta, true );
+		}
+
 		
 		function RecursivelyUpdateObject(NodeObject,ParentNode,ParentElement,Address)
 		{
