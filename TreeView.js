@@ -842,45 +842,6 @@ export default class TreeViewElement extends HTMLElement
 				return Elements;
 			}
 			
-			let ChildWithNoElementCount = 0;
-			for ( let ChildIndex in ChildNodes )
-			{
-				ChildIndex = Number(ChildIndex);
-				const [Key,Value] = ChildNodes[ChildIndex];
-				const ChildAddress = [...Address,Key];
-				const ChildAddressKey = this.GetAddressKey(ChildAddress);
-				const ChildMeta = this.GetNodeMeta( ChildAddress );
-				const ParentChildElements = GetChildElements();
-				let ChildElementIndex = ParentChildElements.findIndex( e => e.AddressKey == ChildAddressKey );
-				let ChildElement = ParentChildElements[ChildElementIndex];
-
-				if ( ChildElementIndex+ChildWithNoElementCount != ChildIndex )
-					ElementsInOrder = false;
-
-				if ( !ChildMeta.Visible )
-				{
-					if ( ChildElement )
-						ParentElement.removeChild(ChildElement);
-					ChildWithNoElementCount++;
-					continue;
-				}
-				
-				const ChildValueIsObject = IsValueNodeChild(Value);
-
-				if ( !ChildElement )
-				{
-					ChildElement = document.createElement(ChildMeta.ElementType);
-					ParentElement.appendChild(ChildElement);
-					this.SetupNewTreeNodeElement( ChildElement, ChildAddress, Value, ChildMeta, ChildValueIsObject );
-				}
-
-				this.SetupTreeNodeElement( ChildElement, ChildAddress, Value, ChildMeta, ChildValueIsObject );
-				
-				if ( ChildValueIsObject )
-				{
-					RecursivelyUpdateObject.call( this, Value, NodeObject, ChildElement, ChildAddress );
-				}
-			}
 			
 			//	remove children no longer present
 			{
@@ -895,10 +856,57 @@ export default class TreeViewElement extends HTMLElement
 					Missing.forEach( e => ParentElement.removeChild(e) );
 			}
 			
+			let ChildWithNoElementCount = 0;
+			for ( let ChildIndex in ChildNodes )
+			{
+				ChildIndex = Number(ChildIndex);
+				const [Key,Value] = ChildNodes[ChildIndex];
+				const ChildAddress = [...Address,Key];
+				const ChildAddressKey = this.GetAddressKey(ChildAddress);
+				const ChildMeta = this.GetNodeMeta( ChildAddress );
+				let ParentChildElements = GetChildElements();
+				let ChildElementIndex = ParentChildElements.findIndex( e => e.AddressKey == ChildAddressKey );
+				let ChildElement = ParentChildElements[ChildElementIndex];
+	
+				//	skip element (and remove if neccessary)
+				if ( !ChildMeta.Visible )
+				{
+					if ( ChildElement )
+						ParentElement.removeChild(ChildElement);
+					ChildWithNoElementCount++;
+					continue;
+				}
+
+				const ChildValueIsObject = IsValueNodeChild(Value);
+
+				if ( !ChildElement )
+				{
+					ChildElement = document.createElement(ChildMeta.ElementType);
+					ParentElement.appendChild(ChildElement);
+					this.SetupNewTreeNodeElement( ChildElement, ChildAddress, Value, ChildMeta, ChildValueIsObject );
+				}
+
+				this.SetupTreeNodeElement( ChildElement, ChildAddress, Value, ChildMeta, ChildValueIsObject );
+	
+				//	do order check late so new elements dont need re-sorting below
+				{
+					ParentChildElements = GetChildElements();
+					ChildElementIndex = ParentChildElements.findIndex( e => e.AddressKey == ChildAddressKey );
+					if ( ChildElementIndex+ChildWithNoElementCount != ChildIndex )
+						ElementsInOrder = false;
+				}
+
+				if ( ChildValueIsObject )
+				{
+					RecursivelyUpdateObject.call( this, Value, NodeObject, ChildElement, ChildAddress );
+				}
+			}
+			
+			
 			//	elements are out of order
 			if ( !ElementsInOrder )
 			{
-				console.log(`re-ordering dom`);
+				//console.log(`re-ordering dom`);
 				//	re-append child elements from 0 to N
 				for ( let ChildIndex in ChildNodes )
 				{
