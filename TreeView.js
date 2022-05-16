@@ -343,21 +343,22 @@ export default class TreeViewElement extends HTMLElement
 	
 	//	fetch an element based on its json address, for some direct,
 	//	non-stateful changes
-	GetElement(Address)
+	GetElement(AddressKey)
 	{
 		function RecursiveMatchChildren(Element)
 		{
 			if ( !Element )
 				return null;
-			
-			if ( Element.Address == Address )
+
+			const ElementAddressKey = this.GetAddressKey(Element.Address);
+			if ( ElementAddressKey == AddressKey )
 				return Element;
 			
 			//	search children
 			const Children = Array.from( Element.children );
 			for ( let Child of Children )
 			{
-				const Match = RecursiveMatchChildren(Child);
+				const Match = RecursiveMatchChildren.call( this, Child );
 				if ( Match )
 					return Match;
 			}
@@ -365,7 +366,7 @@ export default class TreeViewElement extends HTMLElement
 		}
 		
 		const RootElement = this.TreeContainer;
-		const Match = RecursiveMatchChildren( RootElement );
+		const Match = RecursiveMatchChildren.call( this, RootElement );
 		return Match;
 	}
 	
