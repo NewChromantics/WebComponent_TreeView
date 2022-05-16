@@ -95,6 +95,23 @@ function ValueAsText(Value)
 	return `${Value}`;
 }
 
+
+function GetDefaultNodeMeta()
+{
+	const Meta = {};
+	Meta.Collapsed = false;
+	Meta.Visible = true;
+	Meta.Draggable = false;
+	Meta.Droppable = false;
+	Meta.Selected = false;
+	Meta.Writable = false;
+	Meta.ElementType = 'div';
+	Meta.Selectable = true;
+	Meta.Deletable = false;
+	return Meta;
+}
+
+
 function UseTextAreaForString(Value)
 {
 	return ( Value.includes('\t') ||
@@ -115,6 +132,7 @@ function HandleTabKeyInTextArea(OnKeyDownEvent)
 	e.preventDefault();
 	return false;
 }
+
 
 function CreateWritableValueElement(Meta,InitialValue,OnChanged)
 {
@@ -879,20 +897,6 @@ export default class TreeViewElement extends HTMLElement
 		if ( Address === null )
 			Address = ['_root'];
 		
-		function GetDefaultNodeMeta()
-		{
-			const Meta = {};
-			Meta.Collapsed = false;
-			Meta.Visible = true;
-			Meta.Draggable = false;
-			Meta.Droppable = false;
-			Meta.Selected = false;
-			Meta.Writable = false;
-			Meta.ElementType = 'div';
-			Meta.Selectable = true;
-			Meta.Deletable = false;
-			return Meta;
-		}
 		
 		const TreeMeta = this.meta;
 		const Meta = GetDefaultNodeMeta();
@@ -981,7 +985,16 @@ export default class TreeViewElement extends HTMLElement
 
 				if ( !ChildElement )
 				{
-					ChildElement = document.createElement(ChildMeta.ElementType);
+					try
+					{
+						ChildElement = document.createElement(ChildMeta.ElementType);
+					}
+					catch(e)
+					{
+						console.warn(e);
+						const DefaultElementType = GetDefaultNodeMeta().ElementType;
+						ChildElement = document.createElement(DefaultElementType);
+					}
 					ParentElement.appendChild(ChildElement);
 					this.SetupNewTreeNodeElement( ChildElement, ChildAddress, Value, ChildMeta, ChildValueIsObject );
 				}
