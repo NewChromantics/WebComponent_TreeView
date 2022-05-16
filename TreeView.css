@@ -17,7 +17,10 @@ textarea
 }
 
 
-/* every leaf/node element is a div */ 
+/* every leaf/node element is a div 
+gr: not any more, user can override. 
+todo: change to a class
+*/ 
 div
 {
 	--Indent:		0;
@@ -45,7 +48,8 @@ div[Selected]
 }
 
 
-.Collapser
+.Collapser, 
+.Deleter
 {
 	cursor:			pointer;
 	margin-right:	0.4em;
@@ -53,13 +57,19 @@ div[Selected]
 	background:		rgba(0,0,0,0);
 }
 
-.Collapser:hover
+.Deleter
+{
+	xfloat:	right;
+}
+
+.Collapser:hover, 
+.Deleter:hover
 {
 	background:		rgba(0,0,0,0.2);
 }
 
 /* hide children when collapsed */
-div[Collapsed=true] *:not(label):not(.Collapser)
+div[Collapsed=true] *:not(label):not(.Collapser):not(.Deleter)
 {
 	display:	none;
 }
@@ -74,16 +84,9 @@ div[Collapsed=true] .Collapser:before
 	content:	"\25B8";
 }
 
-
-.Deleter
-{
-	border:		none;
-	cursor:		pointer;
-}
-
 .Deleter:before
 {
-	xcontent:	"\2612";	/* 2327 2612 22a0 */
-	content:	"\274c";	/* 2327 2612 22a0 */
+	content:	"\274c";	/* X 274c 2327 2612 22a0 */
+	/* gr: this symbol is making the button/line big */
 	line-height:	1em;
 }

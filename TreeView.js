@@ -521,18 +521,19 @@ export default class TreeViewElement extends HTMLElement
 		this.CallDomEvent('selectionchange',[SelectedAddresses]);
 	}
 	
+	//	this function sets up events, even if dragging or dropping is disabled
 	SetupDraggableTreeNodeElement(Element)
 	{
 		const Address = Element.Address;
 			
 		//	on ios its a css choice
 		//	gr: not required https://stackoverflow.com/questions/6600950/native-html5-drag-and-drop-in-mobile-safari-ipad-ipod-iphone
-		Element.style.setProperty('webkitUserDrag','element');
-		Element.style.setProperty('webkitUserDrop','element');
+		//Element.style.setProperty('webkitUserDrag','element');
+		//Element.style.setProperty('webkitUserDrop','element');
 		
 		function GetDropTarget(Event)
 		{
-			if ( Element.Droppable )
+			if ( Element.droppable )
 			{
 				const Drop = {};
 				Drop.Element = Element;
@@ -545,7 +546,7 @@ export default class TreeViewElement extends HTMLElement
 				return null;
 
 			const ParentElement = Element.parentNode;
-			if ( !ParentElement.Droppable )
+			if ( !ParentElement.droppable )
 				return null;
 				
 			const Drop = {};
@@ -599,6 +600,8 @@ export default class TreeViewElement extends HTMLElement
 		
 		function OnDragStart(Event)
 		{
+			if ( !Element.draggable )
+				return;
 			const Key = Address[Address.length-1];
 			//console.log(`OnDragStart ${Key}`);
 			//Event.dataTransfer.effectAllowed = 'all';
@@ -633,7 +636,7 @@ export default class TreeViewElement extends HTMLElement
 		}
 		function OnDragEnter(Event)
 		{
-			let CanDrop = Element.Droppable;
+			let CanDrop = Element.droppable;
 			if ( !CanDrop )
 				return;
 			//console.log(`OnDragEnter ${Key}`);
@@ -659,11 +662,19 @@ export default class TreeViewElement extends HTMLElement
 		const Key = Address[Address.length-1];
 		const Indent = Address.length-1;
 
+		//	custom meta
 		Element.Address = Address;
 		Element.AddressKey = this.GetAddressKey(Address);
-
-		Element.style.setProperty(`--Indent`,Indent);
 		Element.Key = Key;
+
+		//	assign other meta, like min, max etc
+		//	this was for writable value element, but apply it here too
+		//	gr: we may need to differentiate between the element & the value display...
+		for ( let [AttributeKey,AttributeValue] of Object.entries(Meta) )
+		{
+			Element[AttributeKey] = AttributeValue;
+		}
+		Element.style.setProperty(`--Indent`,Indent);
 		Element.style.setProperty(`--Key`,Key);
 		
 		
@@ -829,18 +840,24 @@ export default class TreeViewElement extends HTMLElement
 				LabelElement.innerText = Label;
 		}
 		
-		//	update meta
-		Element.Droppable = Meta.Droppable;
+		//	.draggable is shorthand for the draggable attribute it seems, but
+		//	default browser draggable is different for different elements (eg. img)
+		Element.droppable = Meta.Droppable;
+		Element.draggable = Meta.Draggable;
 		
 		SetAttributeTrueOrRemove( Element, 'Draggable', Meta.Draggable );
 		SetAttributeTrueOrRemove( Element, 'Droppable', Meta.Droppable );
 		SetAttributeTrueOrRemove( Element, 'Selected', Meta.Selected );
 		//	attribute only exists on collapsable objects
 		SetAttributeTrueOrRemove( Element, 'Collapsed', ValueIsChild, Meta.Collapsed );
+		
+		//console.log(`Element.draggable=${Element.draggable} .Draggable=${Element.Draggable} .droppable=${Element.droppable} .Droppable=${Element.Droppable}`);
 	}
 	
 	GetAddressKey(Address)
 	{
+		if ( !Address )
+			return null;
 		const AddressKey = Address.join(AddressDelin);
 		return AddressKey;
 	}
