@@ -15,6 +15,7 @@ export class TreeNodeElement extends HTMLElement
 //	todo; use a symbol that can't be a key character other wise ['x.x'].y isn't going to work
 //		but still wants to be usable for users
 const AddressDelin = '.';
+const NodeClassName = 'Node';
 
 function AsObjectSafe(Value,Default={})
 {
@@ -694,7 +695,7 @@ export default class TreeViewElement extends HTMLElement
 		}
 		Element.style.setProperty(`--Indent`,Indent);
 		Element.style.setProperty(`--Key`,Key);
-		
+		Element.classList.add( NodeClassName );
 		
 		this.SetupDraggableTreeNodeElement( Element );
 

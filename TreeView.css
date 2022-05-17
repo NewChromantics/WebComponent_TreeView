@@ -21,7 +21,7 @@ textarea
 gr: not any more, user can override. 
 todo: change to a class
 */ 
-div
+.Node
 {
 	--Indent:		0;
 	
@@ -33,16 +33,16 @@ div
 	xxx-webkit-user-select: none;
 }
 
-div[DragOver]
+.Node[DragOver]
 {
 	outline:	dashed red 1px !important;
 }
 
-div[Collapsed]:hover
+.Node[Collapsed]:hover
 {
 	outline:		1px dashed rgba(0,0,0,0.2);
 }
-div[Selected]
+.Node[Selected]
 {
 	outline:		1px dashed rgba(0,0,1,1.0) !important;
 }
@@ -69,17 +69,17 @@ div[Selected]
 }
 
 /* hide children when collapsed */
-div[Collapsed=true] *:not(label):not(.Collapser):not(.Deleter)
+.Node[Collapsed=true] *:not(label):not(.Collapser):not(.Deleter)
 {
 	display:	none;
 }
 
-div[Collapsed=false] .Collapser:before
+.Node[Collapsed=false] .Collapser:before
 {
 	content:	"\25BE";	/*hex html code*/
 }
 
-div[Collapsed=true] .Collapser:before
+.Node[Collapsed=true] .Collapser:before
 {
 	content:	"\25B8";
 }
