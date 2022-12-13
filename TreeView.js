@@ -16,6 +16,8 @@ export class TreeNodeElement extends HTMLElement
 //		but still wants to be usable for users
 const AddressDelin = '.';
 const NodeClassName = 'Node';
+const RootPartName = 'body'
+const AddressPartDelin = '-';
 
 function AsObjectSafe(Value,Default={})
 {
@@ -307,6 +309,7 @@ export default class TreeViewElement extends HTMLElement
 	{
 		this.RootElement = document.createElement('div');
 		this.RootElement.className = this.ElementName();
+		this.RootElement.part = RootPartName;
 		//this.SetupNewTreeNodeElement( this.RootElement, [], undefined, this.GetNodeMeta(null), true );
 		this.RootElement.Address = [];
 		this.SetupDraggableTreeNodeElement( this.RootElement);
@@ -696,6 +699,8 @@ export default class TreeViewElement extends HTMLElement
 		Element.style.setProperty(`--Indent`,Indent);
 		Element.style.setProperty(`--Key`,Key);
 		Element.classList.add( NodeClassName );
+		const AddressPartName = this.GetAddressPartName( Address );
+		Element.part = `${NodeClassName} ${Key} ${AddressPartName}`;
 		
 		this.SetupDraggableTreeNodeElement( Element );
 
@@ -878,6 +883,14 @@ export default class TreeViewElement extends HTMLElement
 		if ( !Address )
 			return null;
 		const AddressKey = Address.join(AddressDelin);
+		return AddressKey;
+	}
+	
+	GetAddressPartName(Address)
+	{
+		if ( !Address )
+			return null;
+		const AddressKey = Address.join(AddressPartDelin);
 		return AddressKey;
 	}
 	
