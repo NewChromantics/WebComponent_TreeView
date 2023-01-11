@@ -915,13 +915,24 @@ export default class TreeViewElement extends HTMLElement
 		const TreeMeta = this.meta;
 		const Meta = GetDefaultNodeMeta();
 		
-		//	special case
+		//	find some user-assigned defaults
+		//	todo: support *'s in the address in a smart way
+		//		regex over [*|aaa].[*|bbb].[*|ccc] ? is that what people normally do?
+		const GlobalMatchAddress = `**`;
+		if ( TreeMeta.hasOwnProperty(GlobalMatchAddress) )
+		{
+			const MatchingNodeMeta = TreeMeta[GlobalMatchAddress];
+			Object.assign( Meta, MatchingNodeMeta );
+		}
+		
+		//	find user assigned case (higher priority than defaults)
 		const AddressKey = this.GetAddressKey(Address);
 		if ( TreeMeta.hasOwnProperty(AddressKey) )
 		{
-			const NodeMeta = TreeMeta[AddressKey];
-			Object.assign( Meta, NodeMeta );
+			const MatchingNodeMeta = TreeMeta[AddressKey];
+			Object.assign( Meta, MatchingNodeMeta );
 		}
+		
 		return Meta;
 	}
 
