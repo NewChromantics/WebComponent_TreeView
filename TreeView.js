@@ -819,10 +819,18 @@ export default class TreeViewElement extends HTMLElement
 				//	try and avoid throwing to help debugging
 				if ( PropertyKey.length == 0 )
 					continue;
-				const KeyNumber = Number(PropertyKey[0]);
-				const KeyStartsWithNumber = !isNaN(KeyNumber);
-				if ( KeyStartsWithNumber )
-					continue;
+				
+				const ReplacementChar = '_';
+				
+				//	keys cannot start with a number
+				const KeyStartsWithChar = isNaN( Number(PropertyKey[0]) );
+				if ( !KeyStartsWithChar )
+				{
+					PropertyKey = `${ReplacementChar}${PropertyKey}`;
+				}
+				
+				//	not allowed some chars
+				PropertyKey.replace('/',ReplacementChar);
 					
 				try
 				{
