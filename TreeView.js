@@ -832,8 +832,8 @@ export default class TreeViewElement extends HTMLElement
 			}
 		}
 		
-		//	Minimise changse
-		if ( Element.ValueCache !== Value )
+		//	Minimise changes - we can't easily get around the case where the first value is undefined, as we need to call this (have a FirstTimeInit bool somewhere?)
+		if ( Element.ValueCache !== Value || Value === undefined )
 		{
 			Element.ValueCache = Value;
 			Element.style.setProperty(`--Value`,Value);
