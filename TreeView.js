@@ -831,7 +831,8 @@ export default class TreeViewElement extends HTMLElement
 				
 				//	not allowed some chars
 				PropertyKey.replace('/',ReplacementChar);
-					
+				PropertyKey.replace(' ',ReplacementChar);
+
 				try
 				{
 					Element.setAttribute(PropertyKey,PropertyValue);
