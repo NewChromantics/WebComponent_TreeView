@@ -1090,8 +1090,9 @@ export default class TreeViewElement extends HTMLElement
 			this.DomEvents[DomEventName] = this[`on${DomEventName}`];
 		}
 
-		//	todo: dispatch event for addListener support
-		//this.dispatchEvent( new CustomEvent(DomEventName) )
+		//	dispatch event for addListener support
+		const DispatchMeta = { detail: Arguments[0] };
+		this.dispatchEvent( new CustomEvent(DomEventName,DispatchMeta) )
 
 		const Event = this.DomEvents[DomEventName];
 		if ( Event )
